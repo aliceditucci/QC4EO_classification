@@ -1,20 +1,17 @@
-import os
-import sys
-import pickle
-
-
+from pytorch_lightning.callbacks import ModelCheckpoint
+import pytorch_lightning as pl
+import numpy as np
 import argparse
-import torch.optim as optim
-from torchinfo import summary
-from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
-from torchmetrics.regression import MeanSquaredError
+import torch
+import sys
+import cv2
+import os
 
 
-from Dataset_loader import DatasetHandler
 from autoencoder_model import *
+from EuroSAT_torch_loader import EuroSATDataModule
 
-
-def main(): 
+if __name__ == "__main__":
 
     #region input arguments
     # Parse the arguments from the command line
@@ -23,7 +20,7 @@ def main():
     parser.add_argument("--numbands", help="Number of bands", required=False, type=int, default=3)
     parser.add_argument("--epochs", help="Number of epochs", required=False, type=int, default=5)
     parser.add_argument("--perc", help="Percentage of dataset", required=False, type=float, default=0.3)
-    parser.add_argument("--method", help="Type of autoencoder: 'small' or 'sscnet' ", required=False, type=str, default='small')
+    parser.add_argument("--method", help="Type of autoencoder: 'small' or 'sscnet' ", required=False, type=str, default='small', choices=['small', 'sscnet'])
     parser.add_argument("--numclasses", help="Num of classes: 2 or all", required=False, type=int, default=2)
     parser.add_argument("--batchsize", help="Batchsize", required=False, type=int, default=16)
     parser.add_argument("--learning_rate", help="Learning rate", required=False, type=float, default=0.001)
@@ -37,10 +34,8 @@ def main():
     
     num_bands = args.numbands
 
-    if num_bands == 3:
-        bands = [3,2,1]
-    else:
-        bands = list(range(num_bands))
+    if num_bands == 3: bands = [0,1,2] # [3,2,1]
+    else: bands = list(range(num_bands))
 
     num_epochs = args.epochs
     percentage_images = args.perc
@@ -50,13 +45,8 @@ def main():
     if num_classes == 2:
         classes = ['River', 'SeaLake']
     else:
-        classes = []
-        for i, c in enumerate(handler.classes):
-            # cl = c.split('/')[-1]
-            cl = os.path.basename(c) #changed because windows
-            classes.append(cl)
-        classes.sort()
-    
+        classes = ['AnnualCrop', 'Forest', 'HerbaceousVegetation', 'Highway', 'Industrial', 'Pasture', 'PermanentCrop', 'Residential', 'River', 'SeaLake']
+        
     batch_size = args.batchsize
     learning_rate = args.learning_rate
     maxp = args.maxp
@@ -75,171 +65,36 @@ def main():
     print('maxp: ', maxp, 'minp: ', minp)
     #endregion
 
-
-    #Load data path
-    dataset_root = '../EuroSAT-split/train'
-    handler = DatasetHandler(dataset_root)
-    imgs_path, imgs_label = handler.load_paths_labels(dataset_root, classes=classes, percentage_images=percentage_images)
-
-    #Split data set 
-    train_imgs, train_labels, val_images, val_labels = handler.train_validation_split(imgs_path, imgs_label, split_factor=0.2)
-    
-    num_batches = len(train_imgs) // batch_size
-    maxpercentiles = [maxp]*num_bands
-    minpercentiles = [minp]*num_bands
-    
-    
-    #make data dir
-    dir = './Data/{}_qubits/'.format(num_qubits)
-    os.makedirs(dir, exist_ok=True)
-
-
-    #Compute and save dataset statistics
-    min_per_band, max_per_band, mean_per_band, pixel_values_per_band, pmin, pmax = handler.compute_dataset_stats(train_imgs, bands = bands, max_images=100, percentiles = [minpercentiles, maxpercentiles])
-
-    stats_file_path = dir + 'stats_{}.pkl'.format(method)
-
-    save_data = {
-            'min_per_band': min_per_band,
-            'max_per_band': max_per_band,
-            'mean_per_band': mean_per_band, 
-            'pmin': pmin,
-            'pmax': pmax,
-                }
-
-    with open(stats_file_path, 'wb') as f:
-        pickle.dump(save_data, f)
-
-    print('Statistics write sucessfully to ' + dir)
-
-    #Load and normalize data
-    train_loader = iter(handler.ms_data_loader(train_imgs, train_labels, batch_size = batch_size, img_shape = (64,64,num_bands), bands = bands)) # 3 for grb reduciton
-    test_loader = iter(handler.ms_data_loader(val_images, val_labels, batch_size = batch_size, img_shape = (64,64,num_bands), bands = bands ))
-
-    #region NN training
+    # Train Model
+    torch.multiprocessing.set_start_method('spawn')  
+    torch.set_float32_matmul_precision('high')
+    # Instantiate LightningModule and DataModule
 
     #Initialize model
-    if method == 'small':
-        network = Autoencoder_small(num_bands, num_qubits)
-    elif method == 'sscnet':
-        network = Autoencoder_sscnet(num_bands, num_qubits)
-    else:
-        raise Exception('Error with architecture')
-    
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(network.parameters(), lr=learning_rate)
-    rmse_metric = MeanSquaredError(squared=False)
-    ssim_metric = StructuralSimilarityIndexMeasure()
-    psnr_metric = PeakSignalNoiseRatio() 
+    if method == 'small': network = Autoencoder_small(num_bands, num_qubits)
+    if method == 'sscnet': network = Autoencoder_sscnet(num_bands, num_qubits)
 
-    #Train model and save results
-    train_loss_list = []
-    val_loss_list = []
+    data_module = EuroSATDataModule(
+        whitelist_classes = classes,
+        batch_size        = batch_size, 
+        bands             = bands,
+        mode              = 'aec',
+        num_workers       = 12,
+    )
 
-    train_rmse_list = []
-    val_rmse_list = []
-    train_ssim_list = []
-    val_ssim_list = []
-    train_psnr_list = []
-    val_psnr_list = []
+    tb_logger   = pl.loggers.TensorBoardLogger(os.path.join('lightning_logs','classifiers'), name=method)
 
-    for epoch in range(num_epochs):
+    # Instantiate ModelCheckpoint callback
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=os.path.join('saved_models','classifiers'),
+        filename=method,
+        monitor='valid_loss',
+        save_top_k=1,
+        mode='min',
+    )
 
-        total_loss = []
-        
-        train_targets = []
-        train_predictions = []
+    # Instantiate Trainer
+    trainer = pl.Trainer(max_epochs=20, callbacks=[checkpoint_callback], logger=tb_logger)
 
-        network.train()
-        # for batch_idx in range(len(train_labels)):
-            # Itera direttamente sui batch del DataLoader
-        for batch_idx in range(num_batches):
-            images, _ = next(train_loader) 
-            outputs = network(images)
-            loss = criterion(outputs, images)
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            total_loss.append(loss.item())
-
-            
-            train_targets.append(images.detach())
-            train_predictions.append(outputs.detach())
-
-            print('\r Epoch %d ~ Batch %d (%d) ~ Loss %f ' % (
-                epoch, batch_idx, num_batches-1, loss.item()), end='\t\t')
-        
-        network.eval()
-        with torch.no_grad():
-            val_loss = []
-            targets = []
-            predictions = []
-            for batch_idx in range(len(val_images)):
-                data, _ = next(test_loader)
-                output = network(data)
-                loss = criterion(output, data)
-
-                val_loss.append(loss.item())
-
-                targets.append(data)
-                predictions.append(output)
-
-        train_loss_list.append(sum(total_loss)/len(total_loss))
-        val_loss_list.append(sum(val_loss)/len(val_loss))
-    
-        print('Training [{:.0f}%]\t Training Loss: {:.4f} Validation Loss: {:.4f}'.format(
-            100. * (epoch + 1) / num_epochs, train_loss_list[-1], val_loss_list[-1]))
-        
-        if epoch % 3 == 1:
-
-                # Concatenate all batches into single tensors
-            targets = torch.cat(targets, dim=0)
-            predictions = torch.cat(predictions, dim=0)
-
-            train_targets = torch.cat(train_targets, dim=0)
-            train_predictions = torch.cat(train_predictions, dim=0)
-
-            rt = rmse_metric(train_predictions, train_targets)
-            rv = rmse_metric(predictions, targets)
-            st = ssim_metric(train_predictions, train_targets)
-            sv = ssim_metric(predictions, targets)
-            pt = psnr_metric(train_predictions, train_targets)
-            pv = psnr_metric(predictions, targets)      
-
-            print('RMSE: ', 'train: ' , rt,'val: ' , rv)
-            print('SSIM: ', 'train: ' , st, 'val: ' , sv)
-            print('PSNR: ', 'train: ' , pt, 'val: ' ,  pv)
-
-            train_rmse_list.append(rt)
-            val_rmse_list.append(rv)
-            train_ssim_list.append(st)
-            val_ssim_list.append(sv)
-            train_psnr_list.append(pt)
-            val_psnr_list.append(pv)
-
-    save_data = {
-                'train_loss_list': train_loss_list,
-                'val_loss_list':  val_loss_list,
-                'train_rmse_list' : train_rmse_list,
-                'val_rmse_list' : val_rmse_list,
-                'train_ssim_list' : train_ssim_list,
-                'val_ssim_list' : val_ssim_list,
-                'train_psnr_list' : train_psnr_list,
-                'val_psnr_list' : val_psnr_list
-                    }
-
-    results_file_path = dir + 'results_{}.pkl'.format(method)
-
-    with open(results_file_path, 'wb') as f:
-        pickle.dump(save_data, f)
-
-    torch.save(network.state_dict(), dir + "model_weights_{}.pth".format(method))
-
-    print('Results write sucessfully to ' + dir)
-
-    #endregion
-
-if __name__ == "__main__":
-    main()
+    # Train the model
+    trainer.fit(network, data_module)
