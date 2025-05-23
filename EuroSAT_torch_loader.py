@@ -15,7 +15,7 @@ class EuroSATDataset(Dataset):
         self.mode      = mode
         self.bands     = bands
 
-        self.mmin, self.mmax = [0]*len(bands), [10000]*len(bands) # FIXME: read from file 
+        self.mmin, self.mmax = [200]*len(bands), [1800]*len(bands) # FIXME: read from file 
 
         if self.mode not in ['aec', 'class']: raise Exception(f"Mode can be <aec> or <class>, found {self.mode}")
 
@@ -37,6 +37,7 @@ class EuroSATDataset(Dataset):
         if torch.cuda.is_available(): device = torch.device('cuda')
         img_path, label = self.data[idx]
         b_in, _, _ = load(img_path)
+        b_in = b_in.astype(np.float32) 
         b_in = b_in[..., self.bands]
 
         # Normalization
@@ -75,17 +76,21 @@ class EuroSATDataModule(pl.LightningDataModule):
              mode=self.mode
         )
 
-        # TODO: implement in bash test split
-        # self.test_dataset  = EuroSATDataset(os.path.join('EuroSAT-split', 'test'),  bands=self.bands, mode=self.mode)
- 
+        self.test_dataset = EuroSATDataset(
+            root_dir = os.path.join('EuroSAT-split', 'test'),  
+             whitelist_classes = self.whitelist_classes, 
+             bands=self.bands, 
+             mode=self.mode
+        )
+
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True,  num_workers=self.num_workers, persistent_workers=True)
 
     def val_dataloader(self):
         return DataLoader(self.valid_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, persistent_workers=True)
     
-    #def test_dataloader(self):
-    #    return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False,  num_workers=self.num_workers, persistent_workers=True)
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False,  num_workers=self.num_workers, persistent_workers=True)
     
 
 def minmaxscaler(img : np.ndarray, mmin : list = None, mmax : list = None) -> np.ndarray: 
