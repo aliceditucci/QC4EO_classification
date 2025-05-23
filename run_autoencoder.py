@@ -34,7 +34,7 @@ if __name__ == "__main__":
     
     num_bands = args.numbands
 
-    if num_bands == 3: bands = [0,1,2] # [3,2,1]
+    if num_bands == 3: bands = [3,2,1] # [3,2,1]
     else: bands = list(range(num_bands))
 
     num_epochs = args.epochs
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     # Instantiate LightningModule and DataModule
 
     #Initialize model
-    if method == 'small': network = Autoencoder_small(num_bands, num_qubits)
+    if method == 'small': network  = Autoencoder_small(num_bands, num_qubits)
     if method == 'sscnet': network = Autoencoder_sscnet(num_bands, num_qubits)
 
     data_module = EuroSATDataModule(
