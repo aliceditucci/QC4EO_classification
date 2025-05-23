@@ -4,3 +4,5 @@ lightning_logs
 saved_models
 __pycache__
 EuroSAT.zip
+EuroSATallBands.zip
+ds
