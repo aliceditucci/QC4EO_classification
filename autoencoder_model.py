@@ -4,13 +4,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import pytorch_lightning as pl
-from loss import HuberSSIM
+from loss import CustomLoss
 
 import matplotlib.pyplot as plt
 
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
 from torchmetrics.regression import MeanSquaredError
-    
+
+
 class Autoencoder_small(pl.LightningModule):
     def __init__(self, channels, num_qubits):
         super().__init__()
@@ -49,7 +50,7 @@ class Autoencoder_small(pl.LightningModule):
             nn.Sigmoid()  # To output values in the range [0, 1] if image data is normalized
         )
 
-        self.loss           = HuberSSIM(alpha=0.2, beta=0.8) #FIXME: parameters to be fixed
+        self.loss           = CustomLoss(loss_weigths=[0.2, 0.8, 0.5]) #FIXME: parameters to be fixed
         self.initial_lr     = 0.001
         self.lr_scheduler_f = 3
         self.gamma          = 0.1
@@ -72,16 +73,6 @@ class Autoencoder_small(pl.LightningModule):
 
         return {"optimizer": optimizer, 'lr_scheduler': {"scheduler": scheduler, "interval": "epoch", "frequency": self.lr_scheduler_f}}
     
-    def get_latent_space(self, x):
-        """
-        Method to get the latent space representation of the input.
-        This will return the output of the encoder (the reduced-dimensionality representation).
-        """
-        self.eval()  # Set to evaluation mode (important if using dropout, batch norm, etc.)
-        with torch.no_grad():  # Disable gradient computation (not needed for inference)
-            latent = self.encoder(x)  # Return only the encoded part
-        return latent
-
     def training_step(self, batch:tuple, batch_idx:int) -> torch.tensor:
         '''
         Overriding torch lighrning training step.
@@ -103,9 +94,9 @@ class Autoencoder_small(pl.LightningModule):
         rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
 
         self.log('train_loss', loss, on_epoch=True, prog_bar=True)
-        self.log('train_rmse', rmse, on_epoch=True, prog_bar=True)
-        self.log('train_ssim', ssim, on_epoch=True, prog_bar=True)
-        self.log('train_psnr', psnr, on_epoch=True, prog_bar=True)
+        self.log('train_rmse', rmse, on_epoch=True, prog_bar=True, metric_attribute='rmse_metric')
+        self.log('train_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
+        self.log('train_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         return loss
 
     def validation_step(self, batch:tuple, batch_idx:int) -> torch.tensor:
@@ -129,9 +120,9 @@ class Autoencoder_small(pl.LightningModule):
         rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
 
         self.log('valid_loss', loss, on_epoch=True, prog_bar=True)
-        self.log('valid_rmse', rmse, on_epoch=True, prog_bar=True)
-        self.log('valid_ssim', ssim, on_epoch=True, prog_bar=True)
-        self.log('valid_psnr', psnr, on_epoch=True, prog_bar=True)
+        self.log('valid_rmse', rmse, on_epoch=True, prog_bar=True, metric_attribute='rmse_metric')
+        self.log('valid_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
+        self.log('valid_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
         if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
@@ -158,10 +149,10 @@ class Autoencoder_small(pl.LightningModule):
         
         rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
 
-        self.log('test_loss', loss, on_epoch=True, prog_bar=True)
-        self.log('test_rmse', rmse, on_epoch=True, prog_bar=True)
-        self.log('test_ssim', ssim, on_epoch=True, prog_bar=True)
-        self.log('test_psnr', psnr, on_epoch=True, prog_bar=True)
+        self.log('test_loss',  loss, on_epoch=True, prog_bar=True)
+        self.log('test_rmse', rmse, on_epoch=True, prog_bar=True, metric_attribute='rmse_metric')
+        self.log('test_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
+        self.log('test_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
         if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
@@ -182,7 +173,6 @@ class Autoencoder_small(pl.LightningModule):
 
         return rmse, ssim, psnr
 
-#def Network
 class Autoencoder_sscnet(pl.LightningModule):
     def __init__(self, channels, num_qubits):
         super().__init__()
@@ -227,7 +217,7 @@ class Autoencoder_sscnet(pl.LightningModule):
             nn.Sigmoid()  # To output values in the range [0, 1] if image data is normalized
         )
 
-        self.loss           = HuberSSIM(alpha=1, beta=1) #FIXME: parameters to be fixed
+        self.loss           = CustomLoss(loss_weigths=[0.2, 0.8, 0.5]) #FIXME: parameters to be fixed
         self.initial_lr     = 0.001
         self.lr_scheduler_f = 3
         self.gamma          = 0.1
@@ -240,16 +230,197 @@ class Autoencoder_sscnet(pl.LightningModule):
         decoded = self.decoder(encoded)
         return decoded
     
+    def configure_optimizers(self) -> torch.optim:
+        '''
+        Prepares the torch optimizer.
+        '''
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.initial_lr)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=self.gamma)
+
+        return {"optimizer": optimizer, 'lr_scheduler': {"scheduler": scheduler, "interval": "epoch", "frequency": self.lr_scheduler_f}}
     
-    def get_latent_space(self, x):
-        """
-        Method to get the latent space representation of the input.
-        This will return the output of the encoder (the reduced-dimensionality representation).
-        """
-        self.eval()  # Set to evaluation mode (important if using dropout, batch norm, etc.)
-        with torch.no_grad():  # Disable gradient computation (not needed for inference)
-            latent = self.encoder(x)  # Return only the encoded part
-        return latent
+    def training_step(self, batch:tuple, batch_idx:int) -> torch.tensor:
+        '''
+        Overriding torch lighrning training step.
+        It runs the training process on a batch of data.
+
+        Parameters:
+        -----------
+        - batch (tuple of torch.tensor): tuple containing the input and ground truth torch tensors
+        - batch_idx (int): integer representing an increasing index for the batches in training dataset
+        
+        Returns:
+        --------
+        - loss (torch.tensor): loss value for the batch
+        '''
+
+        x, y = batch
+        reconstructions = self(x)
+        loss = self.loss(reconstructions, y)
+        rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
+
+        self.log('train_loss', loss, on_epoch=True, prog_bar=True)
+        self.log('train_rmse', rmse, on_epoch=True, prog_bar=True, metric_attribute='rmse_metric')
+        self.log('train_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
+        self.log('train_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
+        return loss
+
+    def validation_step(self, batch:tuple, batch_idx:int) -> torch.tensor:
+        '''
+        Overriding torch lighrning validation step.
+        It runs the validation process on a batch of data.
+
+        Parameters:
+        -----------
+        - batch (tuple of torch.tensor): tuple containing the input and ground truth torch tensors
+        - batch_idx (int): integer representing an increasing index for the batches in validation dataset
+        
+        Returns:
+        --------
+        - loss (torch.tensor): loss value for the batch
+        '''
+        x, y = batch
+        reconstructions = self(x)
+        loss = self.loss(reconstructions, y)
+        
+        rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
+
+        self.log('valid_loss', loss, on_epoch=True, prog_bar=True)
+        self.log('valid_rmse', rmse, on_epoch=True, prog_bar=True, metric_attribute='rmse_metric')
+        self.log('valid_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
+        self.log('valid_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
+        
+        if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
+            log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
+
+        return loss
+
+    def test_step(self, batch:tuple, batch_idx:int) -> torch.tensor:
+        '''
+        Overriding torch lighrning test step.
+        It runs the validation process on a batch of data.
+
+        Parameters:
+        -----------
+        - batch (tuple of torch.tensor): tuple containing the input and ground truth torch tensors
+        - batch_idx (int): integer representing an increasing index for the batches in validation dataset
+        
+        Returns:
+        --------
+        - loss (torch.tensor): loss value for the batch
+        '''
+        x, y = batch
+        reconstructions = self(x)
+        loss = self.loss(reconstructions, y)
+        
+        rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
+
+        self.log('test_loss',  loss, on_epoch=True, prog_bar=True)
+        self.log('test_rmse', rmse, on_epoch=True, prog_bar=True, metric_attribute='rmse_metric')
+        self.log('test_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
+        self.log('test_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
+        
+        if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
+            log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
+
+        return loss
+
+    def compute_metrics(self, predictions, targets):
+        rmse, ssim, psnr = [], [], []
+
+        for b in range(predictions.shape[1]):
+            rmse.append(self.rmse_metric(predictions, targets))
+            ssim.append(self.ssim_metric(predictions, targets))
+            psnr.append(self.psnr_metric(predictions, targets))
+        
+        rmse = torch.mean(torch.tensor(rmse))
+        ssim = torch.mean(torch.tensor(ssim))
+        psnr = torch.mean(torch.tensor(psnr))
+
+        return rmse, ssim, psnr
+
+class DoubleConv(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
+        )
+ 
+    def forward(self, x):
+        return self.block(x)
+ 
+class UNet(pl.LightningModule):
+    def __init__(self, channels, num_qubits):
+        super().__init__()
+
+        self.num_qubits = num_qubits
+ 
+        # Encoder
+        self.encoder = nn.Sequential(
+            DoubleConv(channels, 64),       # x1
+            nn.MaxPool2d(2),                # down1
+            DoubleConv(64, 128),            # x2
+            nn.MaxPool2d(2),                # down2
+            DoubleConv(128, 256),           # x3
+            nn.MaxPool2d(2),                # down3
+            DoubleConv(256, 512),           # x4
+            nn.MaxPool2d(2),                # down4
+            DoubleConv(512, 1024),          # bottleneck
+            nn.Flatten(),
+            nn.Linear(4*4*1024,num_qubits)
+        )
+        
+        self.post_quantum = nn.Sequential(
+            nn.Linear(num_qubits, 4*4*1024),
+            nn.ReLU(),
+            nn.Unflatten(1, (1024, 4, 4))
+        )
+
+        # Decoder (con upsampling + concatenazione skip)
+        self.up1 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
+        self.dec1 = DoubleConv(1024, 512)
+        self.up2 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
+        self.dec2 = DoubleConv(512, 256)
+        self.up3 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.dec3 = DoubleConv(256, 128)
+        self.up4 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        self.dec4 = DoubleConv(128, 64)
+        self.out_conv = nn.Conv2d(64, channels, kernel_size=1)
+        self.final_act = nn.Sigmoid()  # o Softmax per multi-classe
+
+        self.loss           = CustomLoss(loss_weigths=[0.2, 0.8, 0.5]) #FIXME: parameters to be fixed
+        self.initial_lr     = 0.001
+        self.lr_scheduler_f = 3
+        self.gamma          = 0.1
+        self.rmse_metric    = MeanSquaredError(squared=False)
+        self.ssim_metric    = StructuralSimilarityIndexMeasure()
+        self.psnr_metric    = PeakSignalNoiseRatio() 
+ 
+    def forward(self, x):
+        # Encoder (manuale per salvare i punti skip)
+        x1 = self.encoder[0](x)          # 64
+        x2 = self.encoder[2](self.encoder[1](x1))  # 128
+        x3 = self.encoder[4](self.encoder[3](x2))  # 256
+        x4 = self.encoder[6](self.encoder[5](x3))  # 512
+        x5 = self.encoder[8](self.encoder[7](x4))  # bottleneck
+        x5 = self.encoder[9](x5)
+        x5 = self.encoder[10](x5)
+        x5 = self.post_quantum(x5)
+        # Decoder con skip connections
+        x = self.up1(x5)
+        x = self.dec1(torch.cat([x, x4], dim=1))
+        x = self.up2(x)
+        x = self.dec2(torch.cat([x, x3], dim=1))
+        x = self.up3(x)
+        x = self.dec3(torch.cat([x, x2], dim=1))
+        x = self.up4(x)
+        x = self.dec4(torch.cat([x, x1], dim=1))
+        return self.final_act(self.out_conv(x))
 
     def configure_optimizers(self) -> torch.optim:
         '''
@@ -278,10 +449,12 @@ class Autoencoder_sscnet(pl.LightningModule):
         x, y = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
+        rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
+
         self.log('train_loss', loss, on_epoch=True, prog_bar=True)
-        self.log('train_rmse', rmse, on_epoch=True, prog_bar=True)
-        self.log('train_ssim', ssim, on_epoch=True, prog_bar=True)
-        self.log('train_psnr', psnr, on_epoch=True, prog_bar=True)
+        self.log('train_rmse', rmse, on_epoch=True, prog_bar=True, metric_attribute='rmse_metric')
+        self.log('train_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
+        self.log('train_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         return loss
 
     def validation_step(self, batch:tuple, batch_idx:int) -> torch.tensor:
@@ -305,9 +478,9 @@ class Autoencoder_sscnet(pl.LightningModule):
         rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
 
         self.log('valid_loss', loss, on_epoch=True, prog_bar=True)
-        self.log('valid_rmse', rmse, on_epoch=True, prog_bar=True)
-        self.log('valid_ssim', ssim, on_epoch=True, prog_bar=True)
-        self.log('valid_psnr', psnr, on_epoch=True, prog_bar=True)
+        self.log('valid_rmse', rmse, on_epoch=True, prog_bar=True, metric_attribute='rmse_metric')
+        self.log('valid_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
+        self.log('valid_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
         if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
@@ -332,12 +505,12 @@ class Autoencoder_sscnet(pl.LightningModule):
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         
-        rmse, ssim, psnr = compute_metrics(reconstructions, y)
+        rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
 
-        self.log('test_loss', loss, on_epoch=True, prog_bar=True)
-        self.log('test_rmse', rmse, on_epoch=True, prog_bar=True)
-        self.log('test_ssim', ssim, on_epoch=True, prog_bar=True)
-        self.log('test_psnr', psnr, on_epoch=True, prog_bar=True)
+        self.log('test_loss',  loss, on_epoch=True, prog_bar=True)
+        self.log('test_rmse', rmse, on_epoch=True, prog_bar=True, metric_attribute='rmse_metric')
+        self.log('test_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
+        self.log('test_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
         if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
