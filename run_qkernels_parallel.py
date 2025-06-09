@@ -36,6 +36,7 @@ def main():
     parser.add_argument("--ZZ_reps", help="ZZ map repetitions", required=False, type=int, default=1)
     parser.add_argument("--ent_type", help="Type of entanglement: 'linear', 'full' ", required=False, type=str, default='full')
     parser.add_argument("--compute_entropy", help="1 for compute entanglement entropy", required=False, type=int, default=0)
+    parser.add_argument("--mps_sim", help="1 for mps simulation", required=False, type=int, default=0)
 
     np.random.seed(1359)
 
@@ -66,7 +67,17 @@ def main():
     ZZ_reps = args.ZZ_reps
     ent_type = args.ent_type
     compute_entropy = args.compute_entropy
+    mps_sim = args.mps_sim
 
+    if compute_entropy ==1:
+        compute_entropy = True
+    else:
+        compute_entropy = False
+
+    if mps_sim ==1:
+        mps_sim = True
+    else:
+        mps_sim = False
 
     print("\n\n#############################################################################")
 
@@ -76,7 +87,8 @@ def main():
     print('kernel type: ', kernel_type)
     print('ZZ repetitions: ', ZZ_reps)
     print('ent_type: ', ent_type)
-    print('compute entropy', compute_entropy)
+    print('compute entropy:', compute_entropy)
+    print('mps simulation: ', mps_sim)
     #endregion
 
 
@@ -161,8 +173,8 @@ def main():
     X_test_var = X_test_normalized.var(axis=0)
     X_test_var_ordered = X_test_normalized[:,np.argsort(-X_test_var)] # negated array to sort descending 
 
-    print(y_train)
-    print(y_test)
+    # print(y_train)
+    # print(y_test)
 
     m = X_var_ordered.shape[0] #Number of datapoints
 
@@ -187,11 +199,7 @@ def main():
         independent_entries, score, confusion = fidelity_kernels(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type)
 
     elif kernel_type == 'projected':
-    
-        if compute_entropy == 1:
-            independent_entries, score, confusion, entanglement_entropy = projected_kernels(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type, compute_entropy=True)
-        else:
-            independent_entries, score, confusion = projected_kernels(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type)
+        independent_entries, score, confusion, entanglement_entropy = projected_kernels(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type, compute_entropy=compute_entropy, mps_sim = mps_sim)
 
 
     save_data = {
