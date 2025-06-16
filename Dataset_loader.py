@@ -1,10 +1,10 @@
 import numpy as np
 import random
-import torch
+# import torch
 import glob
 import os
 
-from pyosv.io.reader import load
+# from pyosv.io.reader import load
 
 class DatasetHandler:
     def __init__(self, dataset_path):
@@ -238,3 +238,61 @@ class DatasetHandler:
         mean_per_band = sum_per_band / count
         return min_per_band, max_per_band, mean_per_band, pixel_values_per_band
     
+
+class Handler_quantum:
+    def __init__(self, dataset_path):
+        self.dataset_path = dataset_path
+        self.classes = glob.glob(os.path.join(dataset_path, '*'))
+
+    def print_classes(self):
+        print('Classes: ') 
+        for i,c in enumerate(self.classes): 
+            print('     Class ' + str(i) + ' ->', c)
+
+    def load_paths_labels(self, root, classes, percentage_images=1):
+        # Initialize imaages path and images label lists
+        imgs_path = []
+        imgs_label = []
+
+        class_dict = {
+            "AnnualCrop" : 8,#[0,0,0,0],
+            "Forest" : 9, #[0,0,0,1],
+            "HerbaceousVegetation" : 2, #[0,0,1,0],
+            "Highway" : 3, #[0,0,1,1],
+            "Industrial" : 4, #[0,1,0,0],
+            "Pasture" : 5,# [0,1,0,1],
+            "PermanentCrop" : 6, #[0,1,1,0],
+            "Residential" : 7, #[0,1,1,1],
+            "River" : 0, #[1,0,0,0],
+            "SeaLake" : 1, #[1,0,0,1]
+        }
+
+        # For each class in the class list
+        for c in classes:
+            # List all the images in that class
+            paths_in_c = glob.glob(os.path.join(root, c+'/*'))
+
+            # Keep only a percentage of the images
+            num_to_keep = int(len(paths_in_c) * percentage_images)
+            paths_in_c = paths_in_c[:num_to_keep]
+
+
+            for path in paths_in_c:
+                # Append the path of the image in the images path list
+
+                try:  #THIS CAN BE REMOVED LATER BUT NOW THERE ARE CORRUPTED FILES TO SKIP 
+                    path = os.path.normpath(path) # Normalize paths to prevent mixed 
+                    latent = np.load(path)['latent_space'] 
+                    imgs_path.append(latent) 
+                    # Append the label in the iamges label list
+                    imgs_label.append(class_dict[c])
+
+                except (FileNotFoundError, OSError, KeyError, EOFError) as e:
+                    print(f"Skipping file {path}: {e}")
+
+        # Shuffler paths and labels in the same way
+        c = list(zip(imgs_path, imgs_label))
+        random.shuffle(c)
+        imgs_path, imgs_label = zip(*c)
+
+        return np.array(imgs_path), np.array(imgs_label)

@@ -1,0 +1,4 @@
+# Ignore Python cache and environments
+__pycache__/
+.env/
+Data/
