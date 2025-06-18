@@ -49,7 +49,7 @@ class EuroSATDataset(Dataset):
         if self.mode == 'aec': b_ou = b_in.clone()
         if self.mode == 'class': b_ou = torch.tensor(label, dtype=torch.long, device=device) 
        
-        return b_in, b_ou
+        return b_in, b_ou, img_path
 
 class EuroSATDataModule(pl.LightningDataModule):
     def __init__(self, whitelist_classes, batch_size=64, bands=[3,2,1], mode='aec', num_workers=9):

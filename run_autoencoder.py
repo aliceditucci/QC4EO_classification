@@ -11,6 +11,38 @@ import os
 from autoencoder_model import *
 from EuroSAT_torch_loader import EuroSATDataModule
 
+def make_folder(log_name, split):
+    os.makedirs(log_name, exist_ok=True)
+    split_folder = os.path.join(log_name, split)
+    os.makedirs(split_folder, exist_ok=True)
+    # Classes
+    os.makedirs(os.path.join(split_folder, 'AnnualCrop'), exist_ok=True)
+    os.makedirs(os.path.join(split_folder, 'Forest'), exist_ok=True)
+    os.makedirs(os.path.join(split_folder, 'HerbaceousVegetation'), exist_ok=True)
+    os.makedirs(os.path.join(split_folder, 'Highway'), exist_ok=True)
+    os.makedirs(os.path.join(split_folder, 'Industrial'), exist_ok=True)
+    os.makedirs(os.path.join(split_folder, 'Pasture'), exist_ok=True)
+    os.makedirs(os.path.join(split_folder, 'PermanentCrop'), exist_ok=True)
+    os.makedirs(os.path.join(split_folder, 'Residential'), exist_ok=True)
+    os.makedirs(os.path.join(split_folder, 'River'), exist_ok=True)
+    os.makedirs(os.path.join(split_folder, 'SeaLake'), exist_ok=True)
+
+def save_latent_space(loader, network, log_name):
+    network.eval()
+
+    with torch.no_grad():
+        for batch in loader:
+            b_in, b_ou, path = batch
+            b_in = b_in.to(network.device)
+            z = network.encoder(b_in).cpu().numpy()[0,...]
+
+            y = b_ou.cpu().numpy()[0,...]
+
+            path = path[0].replace('.tif', '.npz')
+            path = path.replace('EuroSAT-split', log_name)
+
+            np.savez(path, latent_space=z, label=y)
+
 if __name__ == "__main__":
 
     #region input arguments
@@ -90,3 +122,30 @@ if __name__ == "__main__":
 
     # Train the model
     trainer.fit(network, data_module)
+
+
+    ### Save latent space
+    data_module = EuroSATDataModule(
+        whitelist_classes = classes,
+        batch_size        = 1, 
+        bands             = bands,
+        mode              = 'aec',
+        num_workers       = 4,
+    )
+
+    data_module.setup()
+    train_loader = data_module.train_dataloader()
+    valid_loader = data_module.val_dataloader()
+    test_loader  = data_module.test_dataloader()
+
+    make_folder(log_name, 'train')
+    make_folder(log_name, 'val')
+    make_folder(log_name, 'test')
+
+    save_latent_space(train_loader, network, log_name)
+    save_latent_space(valid_loader, network, log_name)
+    save_latent_space(test_loader, network, log_name)
+
+
+
+    

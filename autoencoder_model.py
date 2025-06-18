@@ -88,7 +88,7 @@ class Autoencoder_small(pl.LightningModule):
         - loss (torch.tensor): loss value for the batch
         '''
 
-        x, y = batch
+        x, y, path = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
@@ -113,7 +113,7 @@ class Autoencoder_small(pl.LightningModule):
         --------
         - loss (torch.tensor): loss value for the batch
         '''
-        x, y = batch
+        x, y, path = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         
@@ -143,7 +143,7 @@ class Autoencoder_small(pl.LightningModule):
         --------
         - loss (torch.tensor): loss value for the batch
         '''
-        x, y = batch
+        x, y, path = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         
@@ -254,7 +254,7 @@ class Autoencoder_sscnet(pl.LightningModule):
         - loss (torch.tensor): loss value for the batch
         '''
 
-        x, y = batch
+        x, y, path = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
@@ -279,7 +279,7 @@ class Autoencoder_sscnet(pl.LightningModule):
         --------
         - loss (torch.tensor): loss value for the batch
         '''
-        x, y = batch
+        x, y, path = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         
@@ -309,7 +309,7 @@ class Autoencoder_sscnet(pl.LightningModule):
         --------
         - loss (torch.tensor): loss value for the batch
         '''
-        x, y = batch
+        x, y, path = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         
@@ -382,15 +382,15 @@ class UNet(pl.LightningModule):
         )
 
         # Decoder (con upsampling + concatenazione skip)
-        self.up1 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
-        self.dec1 = DoubleConv(1024, 512)
-        self.up2 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
-        self.dec2 = DoubleConv(512, 256)
-        self.up3 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
-        self.dec3 = DoubleConv(256, 128)
-        self.up4 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
-        self.dec4 = DoubleConv(128, 64)
-        self.out_conv = nn.Conv2d(64, channels, kernel_size=1)
+        self.up1       = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
+        self.dec1      = DoubleConv(1024, 512)
+        self.up2       = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
+        self.dec2      = DoubleConv(512, 256)
+        self.up3       = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.dec3      = DoubleConv(256, 128)
+        self.up4       = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        self.dec4      = DoubleConv(128, 64)
+        self.out_conv  = nn.Conv2d(64, channels, kernel_size=1)
         self.final_act = nn.Sigmoid()  # o Softmax per multi-classe
 
         self.loss           = CustomLoss(loss_weigths=[0.2, 0.8, 0.5]) #FIXME: parameters to be fixed
@@ -446,7 +446,7 @@ class UNet(pl.LightningModule):
         - loss (torch.tensor): loss value for the batch
         '''
 
-        x, y = batch
+        x, y, path = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         rmse, ssim, psnr = self.compute_metrics(reconstructions, y)
@@ -471,7 +471,7 @@ class UNet(pl.LightningModule):
         --------
         - loss (torch.tensor): loss value for the batch
         '''
-        x, y = batch
+        x, y, path = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         
@@ -501,7 +501,7 @@ class UNet(pl.LightningModule):
         --------
         - loss (torch.tensor): loss value for the batch
         '''
-        x, y = batch
+        x, y, path = batch
         reconstructions = self(x)
         loss = self.loss(reconstructions, y)
         
@@ -534,7 +534,7 @@ class UNet(pl.LightningModule):
 # TODO: to be moved to a utils .py file
 
 def log_visual_results(logger, current_epoch, batch:tuple, reconstructions:torch.tensor, batch_idx:int):
-    x, _ = batch # bs, c, w, h
+    x, _, _ = batch # bs, c, w, h
     x = x.cpu().detach().numpy()
     yp = reconstructions
     yp = yp.cpu().detach().numpy()
