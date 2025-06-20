@@ -362,3 +362,41 @@ def projected_kernel_test_mps(X, Y, x_partial_traces, ZZ_reps=1, ent_type='linea
             kernel_matrix[row, column] = kernel_value(x1_id = X.shape[0] + row, x2_id = column, all_partial_traces_matrix = all_partial_traces)   
             
     return(kernel_matrix) 
+
+def compute_entanglement_entropy(X, ZZ_reps=1, ent_type='linear'):
+
+    #NEED TO ADD THE SAME FOR TEST FUNCTION!!!!!!!!!!!!!
+
+    method = 'statevector' #'matrix_product_state' or 'statevector'
+    device = 'GPU' #'CPU' or 'GPU'
+    print('Simulator method device ', method, device)
+    # sim = AerSimulator(method='matrix_product_state') #'matrix_product_state' or 'statevector'
+    sim = AerSimulator(method=method, device=device) #'matrix_product_state' or 'statevector'
+
+    print('sim', sim)
+    N_FEATURES = X.shape[1]
+    all_entropies = np.empty((X.shape[0]))
+
+    for data_point in range(X.shape[0]):
+        qc = QuantumCircuit(N_FEATURES)
+        fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+        # fm_bound = fm.bind_parameters(X[data_point])
+        fm_bound = fm.assign_parameters(X[data_point])
+        qc.append(fm_bound, range(N_FEATURES))
+
+        # Save subsystem A (first half) density matrix
+        half = N_FEATURES // 2
+        qc.save_density_matrix(list(range(half)), label='subsystem_half')
+
+        # Run once
+        qc = transpile(qc, sim)
+        result = sim.run(qc).result()
+        data = result.data(0)
+
+        reduced_rho = data['subsystem_half']
+
+        all_entropies[data_point] = entropy(reduced_rho, base=2)
+            
+    entanglement_entropy = np.mean(all_entropies)
+
+    return entanglement_entropy, all_entropies

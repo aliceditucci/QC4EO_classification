@@ -36,7 +36,6 @@ grpcio==1.71.0
 h5py==3.13.0
 idna==3.10
 ipykernel==6.29.5
-ipython==9.0.2
 ipython_pygments_lexers==1.1.1
 jedi==0.19.2
 Jinja2==3.1.6
@@ -89,7 +88,6 @@ pyshp==2.3.1
 python-dateutil==2.9.0.post0
 python-slugify==8.0.4
 pytz==2025.1
-pywin32==309
 pyzmq==26.2.1
 qiskit==1.4.1
 qiskit-aer==0.16.4
