@@ -72,8 +72,12 @@ def main():
 
     if mps_sim ==1:
         mps_sim = True
+        method='matrix_product_state'
+        device='CPU'
     else:
         mps_sim = False
+        method='statevector'
+        device='GPU' 
 
     print("\n\n#############################################################################")
 
@@ -119,7 +123,7 @@ def main():
         independent_entries, score, confusion = fidelity_kernels(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type)
 
     elif kernel_type == 'projected':
-        independent_entries, score, confusion, entanglement_entropy = projected_kernels(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, compute_entropy=compute_entropy, mps_sim = mps_sim)
+        independent_entries, score, confusion = projected_kernels(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, method, device)
 
 
     save_data = {

@@ -201,23 +201,16 @@ def projected_kernel_with_entropy(X, ZZ_reps=1, ent_type='linear'):
 
     return all_partial_traces, kernel_matrix, entanglement_entropy
 
-def projected_kernels(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type, compute_entropy = None, mps_sim = None):
+def projected_kernels(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type,  method, device):
 
-    print(compute_entropy, mps_sim)
+    print(method, device)
     # num_features = train_features.shape[1] #num qubits
     m = train_features.shape[0]  #num data points
 
     t0 = time.time()
     
-    entanglement_entropy = 0 
+    all_partial_traces, gram_matrix_train = projected_kernel_simulator(train_features, ZZ_reps=ZZ_reps, ent_type=ent_type, method=method, device=device)
     
-    if compute_entropy:
-        all_partial_traces, gram_matrix_train, entanglement_entropy = projected_kernel_with_entropy(train_features, ZZ_reps=ZZ_reps, ent_type=ent_type)
-    elif mps_sim:
-        all_partial_traces, gram_matrix_train = projected_kernel_mps(train_features, ZZ_reps=ZZ_reps, ent_type=ent_type)
-    else:
-        all_partial_traces, gram_matrix_train = projected_kernel(train_features, ZZ_reps=ZZ_reps, ent_type=ent_type)
-
     t1 = time.time()
     print(t1-t0, 'sec to evaluate kernels')
     mask = np.triu_indices(m,k=1) #returns the indices of the upper-triangular part of an (m x m) square matrix.
@@ -229,10 +222,7 @@ def projected_kernels(train_features, train_labels, test_features, test_labels, 
 
     svc.fit(gram_matrix_train, train_labels)
 
-    if mps_sim:
-        gram_matrix_test =  projected_kernel_test_mps(train_features, test_features, all_partial_traces, ZZ_reps=ZZ_reps, ent_type=ent_type)  
-    else:
-        gram_matrix_test =  projected_kernel_test(train_features, test_features, all_partial_traces, ZZ_reps=ZZ_reps, ent_type=ent_type) 
+    gram_matrix_test =  projected_kernel_test_simulator(train_features, test_features, all_partial_traces, ZZ_reps=ZZ_reps, ent_type=ent_type, method=method, device=device)  
 
     score_kernel = svc.score(gram_matrix_test, test_labels)
     t2 = time.time()
@@ -260,7 +250,7 @@ def projected_kernels(train_features, train_labels, test_features, test_labels, 
     #     return independent_entries, score_kernel, confusion
 
 
-    return independent_entries, score_kernel, confusion, entanglement_entropy
+    return independent_entries, score_kernel, confusion
 
     
 
@@ -269,10 +259,15 @@ def projected_kernels(train_features, train_labels, test_features, test_labels, 
 ############################ 
 #SIMULATORS
 
-def projected_kernel_mps(X, ZZ_reps=1, ent_type='linear'):
+def projected_kernel_simulator(X, ZZ_reps=1, ent_type='linear', method = 'matrix_product_state', device = 'CPU'):
 
-    print('MPS SIMULATOR')
-    sim = AerSimulator(method='matrix_product_state') #'matrix_product_state' or 'statevector'
+    #NEED TO ADD THE SAME FOR TEST FUNCTION!!!!!!!!!!!!!
+
+    method = method  #'matrix_product_state' or 'statevector'
+    device = device #'CPU' or 'GPU'
+    # sim = AerSimulator(method='matrix_product_state') #'matrix_product_state' or 'statevector'
+    sim = AerSimulator(method=method, device=device) #'matrix_product_state' or 'statevector'
+    print("Used backend", sim.configuration().to_dict()['backend_name'])
 
     N_FEATURES = X.shape[1]
     all_partial_traces = np.empty((X.shape[0],N_FEATURES,2,2), dtype = 'complex128') # four dimensions: 0-number of data points, 1-number of partial trace matrices, 2,3 - dimension of partial trace matrix
@@ -315,11 +310,13 @@ def projected_kernel_mps(X, ZZ_reps=1, ent_type='linear'):
     return all_partial_traces, kernel_matrix
 
 
+def projected_kernel_test_simulator(X, Y, x_partial_traces, ZZ_reps=1, ent_type='linear', method = 'matrix_product_state', device = 'CPU'):
 
-def projected_kernel_test_mps(X, Y, x_partial_traces, ZZ_reps=1, ent_type='linear'):
-
-    print('MPS SIMULATOR')
-    sim = AerSimulator(method='matrix_product_state') #'matrix_product_state' or 'statevector'
+    method = method  #'matrix_product_state' or 'statevector'
+    device = device #'CPU' or 'GPU'
+    # sim = AerSimulator(method='matrix_product_state') #'matrix_product_state' or 'statevector'
+    sim = AerSimulator(method=method, device=device) #'matrix_product_state' or 'statevector'
+    print("Used backend", sim.configuration().to_dict()['backend_name'])
 
     N_FEATURES = X.shape[1]
 

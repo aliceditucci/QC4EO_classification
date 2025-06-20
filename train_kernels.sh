@@ -8,14 +8,17 @@
 # rm -r logs
 # mkdir logs
 
-for qubit in 20
+for mps_sim in 0; do
+for qubit in 4 8 12 16 20
 do
-    echo "Training models for $qubit qubits"
-    python run_qkernels_parallel.py --N $qubit --mps_sim 1 --compress_method small --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 >> logs/small_${qubit}_projected_linear_1_1_0.log 2>&1 &
-    python run_qkernels_parallel.py --N $qubit --mps_sim 1 --compress_method sscnet --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 >> logs/sscnet_${qubit}_projected_linear_1_1_0.log 2>&1 & 
-    python run_qkernels_parallel.py --N $qubit --mps_sim 1 --compress_method unet --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 >> logs/unet_${qubit}_projected_linear_1_1_0.log 2>&1 &
+    echo "Training models for $qubit qubits mps_sim $mps_sim all compress methods" 
+    python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method small --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 >> logs/small_${qubit}_projected_linear_1_${mps_sim}_0.log 2>&1 &
+    python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method sscnet --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 >> logs/sscnet_${qubit}_projected_linear_1_${mps_sim}_0.log 2>&1 & 
+    python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method unet --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 >> logs/unet_${qubit}_projected_linear_1_${mps_sim}_0.log 2>&1 &
     #python run_qkernels_parallel.py --N $qubit --mps_sim 1 --compress_method small --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 
-    wait
+    
+    wait 
+done
 done
 
 
