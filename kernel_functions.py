@@ -201,6 +201,9 @@ def projected_kernel_with_entropy(X, ZZ_reps=1, ent_type='linear'):
 
     return all_partial_traces, kernel_matrix, entanglement_entropy
 
+############################ 
+#SIMULATORS
+
 def projected_kernels(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type,  method, device):
 
     print(method, device)
@@ -252,12 +255,6 @@ def projected_kernels(train_features, train_labels, test_features, test_labels, 
 
     return independent_entries, score_kernel, confusion
 
-    
-
-
-
-############################ 
-#SIMULATORS
 
 def projected_kernel_simulator(X, ZZ_reps=1, ent_type='linear', method = 'matrix_product_state', device = 'CPU'):
 
@@ -397,3 +394,158 @@ def compute_entanglement_entropy(X, ZZ_reps=1, ent_type='linear'):
     entanglement_entropy = np.mean(all_entropies)
 
     return entanglement_entropy, all_entropies
+
+def fidelity_kernels_simulator(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type , method = 'matrix_product_state', device = 'CPU'):
+
+    print(method, device)
+    # num_features = train_features.shape[1] #num qubits
+    m = train_features.shape[0]  #num data points
+
+    t0 = time.time()
+    
+    gram_matrix_train = get_fidelity_kernel_entries(train_features, ZZ_reps=ZZ_reps, ent_type=ent_type, method=method, device=device)
+
+    t1 = time.time()
+    print(t1-t0, 'sec to evaluate kernels')
+    mask = np.triu_indices(m,k=1) #returns the indices of the upper-triangular part of an (m x m) square matrix.
+    independent_entries = gram_matrix_train[mask]
+
+    #SVC train and test
+    svc = SVC(kernel="precomputed", random_state=42) #Remove , random_state=42 for not deterministic
+
+    svc.fit(gram_matrix_train, train_labels)
+
+    gram_matrix_test =  get_fidelity_kernel_entries_test(train_features, test_features, ZZ_reps=ZZ_reps, ent_type=ent_type, method=method, device=device) 
+
+    score_kernel = svc.score(gram_matrix_test, test_labels)
+    t2 = time.time()
+    print('tot time: ', t2-t0, 'sec \n')
+    print(f"Precomputed kernel classification test score: {score_kernel}\n")
+
+    # Get predicted probabilities
+    y_pred_probs = svc.predict(gram_matrix_test)
+
+    # Convert probabilities to class labels (assuming binary classification with threshold 0.5)
+    y_pred = (y_pred_probs > 0.5).astype(int).flatten()
+
+    # Compute confusion matrix (normalized)
+    labels = np.unique(test_labels)  # Dynamically determine class labels
+    confusion = confusion_matrix(test_labels, y_pred, labels=labels, normalize='true')
+
+    # Print Accuracy Per Class and Report
+    print('Accuracy per class:', confusion.diagonal(), 'Mean Accuracy:', confusion.diagonal().mean())
+    print(classification_report(test_labels, y_pred, labels=labels, target_names=[str(label) for label in labels], digits=4))
+
+    return independent_entries, score_kernel, confusion
+
+
+def get_fidelity_kernel_entries(X, ZZ_reps, ent_type, method = 'statevector', device='CPU'):
+
+    sim = AerSimulator(method=method, device=device) #'matrix_product_state' or 'statevector'
+    print("Used backend", sim.configuration().to_dict()['backend_name'])
+
+    N_FEATURES = X.shape[1] #num qubits
+    m = X.shape[0]  #num data points
+    
+    kernel_matrix = np.zeros((m,m))
+
+    for data_point in range(m):
+
+        for data_point2 in range(data_point+1, m):
+            qc1 = QuantumCircuit(N_FEATURES)
+            fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+            # fm_bound = fm.bind_parameters(X[data_oint])
+            fm_bound = fm.assign_parameters(X[data_point])
+            qc1.append(fm_bound, range(N_FEATURES))
+
+            qc2 = QuantumCircuit(N_FEATURES)
+            fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+            # fm_bound = fm.bind_parameters(X[data_point])
+            fm_bound = fm.assign_parameters(X[data_point2])
+            qc2.append(fm_bound, range(N_FEATURES))
+
+            qc = qc1.compose(qc2.inverse())
+            qc.save_statevector(label=f'statevector')
+
+            ####################
+            #IF LATER WE WANT TO DO SHOTS WE CAN SUE THIS FUNCTION
+
+            # options = {
+            # "backend_options": {
+            #     "method": method,
+            #     "device": device,
+            #     }}
+            # sampler = SamplerV2(options=options)
+            # print("Used backend", sampler._backend.configuration().to_dict()['backend_name'])
+            # print("Default shots:", sampler.default_shots)
+
+            # fidelity = ComputeUncompute(sampler=sampler)
+            # kernel = FidelityQuantumKernel(fidelity=fidelity, feature_map=feature_map)
+
+            # qc.measure_all()
+
+            # qc = transpile(qc, backend=sampler._backend, optimization_level=3)
+            # result  = sampler.run([qc], shots = 100000).result()
+            # # result  = sampler.run([qc]).result()
+
+            # # print(result.quasi_dists)
+            # # pub_result = result[0]
+            # # pub_result.data.meas.get_counts()
+            # # counts = pub_result.data.meas.get_counts()
+            # # print(pub_result.data.meas)
+            # # print(counts)
+            # quasis = post_process(result)
+            # print(quasis)
+            # fidelity = quasis.get(0, 0)
+            # kernel_matrix[data_point, data_point2] = fidelity
+            
+            qc = transpile(qc, sim, optimization_level=3)
+            result = sim.run(qc).result()
+            state = result.data(0)['statevector']
+            fidelity = state.probabilities()[0]
+            kernel_matrix[data_point, data_point2] = fidelity
+
+
+    kernel_matrix += kernel_matrix.T
+    kernel_matrix += np.identity(kernel_matrix.shape[0])
+
+    return kernel_matrix
+
+
+def get_fidelity_kernel_entries_test(X, Y, ZZ_reps, ent_type, method = 'statevector', device='CPU'):
+    # X = train features
+    # Y = test features
+
+    sim = AerSimulator(method=method, device=device) #'matrix_product_state' or 'statevector'
+    print("Used backend", sim.configuration().to_dict()['backend_name'])
+
+    N_FEATURES = X.shape[1] #num qubits
+    m = X.shape[0]  #num train data points
+    
+    kernel_matrix = np.zeros((Y.shape[0], m))
+
+    for row in range(kernel_matrix.shape[0]):
+        for column in range(kernel_matrix.shape[1]):
+
+            qc1 = QuantumCircuit(N_FEATURES)
+            fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+            # fm_bound = fm.bind_parameters(X[data_oint])
+            fm_bound = fm.assign_parameters(X[row])
+            qc1.append(fm_bound, range(N_FEATURES))
+
+            qc2 = QuantumCircuit(N_FEATURES)
+            fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+            # fm_bound = fm.bind_parameters(X[data_point])
+            fm_bound = fm.assign_parameters(X[column])
+            qc2.append(fm_bound, range(N_FEATURES))
+
+            qc = qc1.compose(qc2.inverse())
+            qc.save_statevector(label=f'statevector')
+            
+            qc = transpile(qc, sim, optimization_level=3)
+            result = sim.run(qc).result()
+            state = result.data(0)['statevector']
+            fidelity = state.probabilities()[0]
+            kernel_matrix[row, column] = fidelity
+
+    return kernel_matrix

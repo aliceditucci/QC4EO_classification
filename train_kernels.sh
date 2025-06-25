@@ -8,19 +8,41 @@
 # rm -r logs
 # mkdir logs
 
-for mps_sim in 0; do
-for qubit in 4 8 12 16 20
-do
-    echo "Training models for $qubit qubits mps_sim $mps_sim all compress methods" 
-    python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method small --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 >> logs/small_${qubit}_projected_linear_1_${mps_sim}_0.log 2>&1 &
-    python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method sscnet --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 >> logs/sscnet_${qubit}_projected_linear_1_${mps_sim}_0.log 2>&1 & 
-    python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method unet --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 >> logs/unet_${qubit}_projected_linear_1_${mps_sim}_0.log 2>&1 &
-    #python run_qkernels_parallel.py --N $qubit --mps_sim 1 --compress_method small --kernel_type projected --ZZ_reps 1 --ent_type linear --compute_entropy 0 
+# for kernel_type in fidelity; do
+# for qubit in 4; do
+# for reps in 1; do
+# for ent in linear; do
+# for mps_sim in 1; do
+#     echo "Training models for $qubit qubits mps_sim $mps_sim all compress methods $reps $ent $mps_sim" 
+#     python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method small --kernel_type $kernel_type --ZZ_reps $reps --ent_type $ent --compute_entropy 0 >> logs/small_${qubit}_${kernel_type}_${ent}_${reps}_${mps_sim}_0.log 2>&1 &
+#     #python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method sscnet --kernel_type $kernel_type --ZZ_reps $reps --ent_type $ent --compute_entropy 0 >> logs/sscnet_${qubit}_${kernel_type}_${ent}_${reps}_${mps_sim}_0.log 2>&1 & 
+#     #python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method unet --kernel_type $kernel_type --ZZ_reps $reps --ent_type $ent --compute_entropy 0 >> logs/unet_${qubit}_${kernel_type}_${ent}_${reps}_${mps_sim}_0.log 2>&1 &
+#     # python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method small --kernel_type $kernel_type --ZZ_reps $reps --ent_type $ent --compute_entropy 0 >> logs/small_${qubit}_${kernel_type}_${ent}_${reps}_${mps_sim}_0.log 2>&1 &
     
-    wait 
-done
-done
+# done
+# done
+# done
+# done
+# done
+# wait
 
+for kernel_type in fidelity; do
+for qubit in 4; do
+for reps in 1; do
+for ent in linear; do
+for mps_sim in 0 1; do
+    echo "Training models for $qubit qubits mps_sim $mps_sim all compress methods $reps $ent $mps_sim" 
+    python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method small --kernel_type $kernel_type --ZZ_reps $reps --ent_type $ent --compute_entropy 0 >> logs/small_${qubit}_${kernel_type}_${ent}_${reps}_${mps_sim}_0.log 2>&1 &
+    python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method sscnet --kernel_type $kernel_type --ZZ_reps $reps --ent_type $ent --compute_entropy 0 >> logs/sscnet_${qubit}_${kernel_type}_${ent}_${reps}_${mps_sim}_0.log 2>&1 & 
+    python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method unet --kernel_type $kernel_type --ZZ_reps $reps --ent_type $ent --compute_entropy 0 >> logs/unet_${qubit}_${kernel_type}_${ent}_${reps}_${mps_sim}_0.log 2>&1 &
+    #python run_qkernels_parallel.py --N $qubit --mps_sim $mps_sim --compress_method small --kernel_type $kernel_type --ZZ_reps $reps --ent_type $ent --compute_entropy 0 >> test.log 2>&1 &
+    
+done
+wait
+done
+done
+done
+done
 
 # #!/bin/bash
 

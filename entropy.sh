@@ -6,12 +6,12 @@
 # done
 
 for kernel in projected; do
-    for ent in full; do
-        for reps in 2; do
-            for N in 4 8 12 16; do
+    for ent in full linear; do
+        for reps in 1 2; do
+            for N in 20; do
                 for method in small sscnet unet; do
                     echo "Computing entropy for $N qubits with $method"
-                    python run_compute_entropy.py --N $N --mps_sim 1 --compress_method $method --kernel_type $kernel \
+                    python run_compute_entropy.py --N $N --mps_sim 0 --compress_method $method --kernel_type $kernel \
                         --ZZ_reps $reps --ent_type $ent --compute_entropy 0 \
                         >> logs/entropy_${method}_${N}_${kernel}_${ent}_${reps}_1_0.log 2>&1 &
                 done

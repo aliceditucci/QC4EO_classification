@@ -120,7 +120,7 @@ def main():
     entanglement_entropy = 0 
 
     if kernel_type == 'fidelity':
-        independent_entries, score, confusion = fidelity_kernels(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type)
+        independent_entries, score, confusion = fidelity_kernels_simulator(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, method, device)
 
     elif kernel_type == 'projected':
         independent_entries, score, confusion = projected_kernels(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, method, device)
