@@ -13,7 +13,7 @@ from torchmetrics.regression import MeanSquaredError
 
 
 class Autoencoder_small(pl.LightningModule):
-    def __init__(self, channels, num_qubits):
+    def __init__(self, channels, num_qubits, initial_lr=0.002, loss_weigths=[0.2, 0.8, 0.5], gamma=0.1, lr_scheduler_f=3):
         super().__init__()
 
         self.num_qubits = num_qubits
@@ -50,10 +50,10 @@ class Autoencoder_small(pl.LightningModule):
             nn.Sigmoid()  # To output values in the range [0, 1] if image data is normalized
         )
 
-        self.loss           = CustomLoss(loss_weigths=[0.2, 0.8, 0.5]) #FIXME: parameters to be fixed
-        self.initial_lr     = 0.001
-        self.lr_scheduler_f = 3
-        self.gamma          = 0.1
+        self.loss           = CustomLoss(loss_weigths=loss_weigths)
+        self.initial_lr     = initial_lr
+        self.lr_scheduler_f = lr_scheduler_f
+        self.gamma          = gamma
 
         self.rmse_metric    = MeanSquaredError(squared=False)
         self.ssim_metric    = StructuralSimilarityIndexMeasure()
@@ -174,7 +174,7 @@ class Autoencoder_small(pl.LightningModule):
         return rmse, ssim, psnr
 
 class Autoencoder_sscnet(pl.LightningModule):
-    def __init__(self, channels, num_qubits):
+    def __init__(self, channels, num_qubits, initial_lr=0.002, loss_weigths=[0.2, 0.8, 0.5], gamma=0.1, lr_scheduler_f=3):
         super().__init__()
 
         self.num_qubits = num_qubits
@@ -217,10 +217,10 @@ class Autoencoder_sscnet(pl.LightningModule):
             nn.Sigmoid()  # To output values in the range [0, 1] if image data is normalized
         )
 
-        self.loss           = CustomLoss(loss_weigths=[0.2, 0.8, 0.5]) #FIXME: parameters to be fixed
-        self.initial_lr     = 0.001
-        self.lr_scheduler_f = 3
-        self.gamma          = 0.1
+        self.loss           = CustomLoss(loss_weigths=loss_weigths)
+        self.initial_lr     = initial_lr
+        self.lr_scheduler_f = lr_scheduler_f
+        self.gamma          = gamma
         self.rmse_metric    = MeanSquaredError(squared=False)
         self.ssim_metric    = StructuralSimilarityIndexMeasure()
         self.psnr_metric    = PeakSignalNoiseRatio() 
@@ -355,7 +355,7 @@ class DoubleConv(nn.Module):
         return self.block(x)
  
 class UNet(pl.LightningModule):
-    def __init__(self, channels, num_qubits):
+    def __init__(self, channels, num_qubits, initial_lr=0.002, loss_weigths=[0.2, 0.8, 0.5], gamma=0.1, lr_scheduler_f=3):
         super().__init__()
 
         self.num_qubits = num_qubits
@@ -393,10 +393,10 @@ class UNet(pl.LightningModule):
         self.out_conv  = nn.Conv2d(64, channels, kernel_size=1)
         self.final_act = nn.Sigmoid()  # o Softmax per multi-classe
 
-        self.loss           = CustomLoss(loss_weigths=[0.2, 0.8, 0.5]) #FIXME: parameters to be fixed
-        self.initial_lr     = 0.001
-        self.lr_scheduler_f = 3
-        self.gamma          = 0.1
+        self.loss           = CustomLoss(loss_weigths=loss_weigths) 
+        self.initial_lr     = initial_lr
+        self.lr_scheduler_f = lr_scheduler_f
+        self.gamma          = gamma
         self.rmse_metric    = MeanSquaredError(squared=False)
         self.ssim_metric    = StructuralSimilarityIndexMeasure()
         self.psnr_metric    = PeakSignalNoiseRatio() 
