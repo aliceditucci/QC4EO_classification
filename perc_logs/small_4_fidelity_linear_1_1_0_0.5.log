@@ -1,0 +1,66 @@
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+percentage_train 0.5
+train:  (2200, 4)
+validation:  (825, 4)
+matrix_product_state CPU
+37.220603227615356 sec to evaluate kernels
+tot time:  87.5071370601654 sec 
+
+Precomputed kernel classification test score: 0.7793939393939394
+
+Accuracy per class: [0.768      0.78888889] Mean Accuracy: 0.7784444444444445
+              precision    recall  f1-score   support
+
+           0     0.7520    0.7680    0.7599       375
+           1     0.8032    0.7889    0.7960       450
+
+    accuracy                         0.7794       825
+   macro avg     0.7776    0.7784    0.7779       825
+weighted avg     0.7799    0.7794    0.7796       825
+
+Results write sucessfully to ../../../Data/aditucci/Output_percentage_data/small/fidelity/N_4/
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+percentage_train 0.5
+train:  (2200, 4)
+validation:  (825, 4)
+matrix_product_state CPU
+38.31724429130554 sec to evaluate kernels
+tot time:  89.43784761428833 sec 
+
+Precomputed kernel classification test score: 0.7793939393939394
+
+Accuracy per class: [0.768      0.78888889] Mean Accuracy: 0.7784444444444445
+              precision    recall  f1-score   support
+
+           0     0.7520    0.7680    0.7599       375
+           1     0.8032    0.7889    0.7960       450
+
+    accuracy                         0.7794       825
+   macro avg     0.7776    0.7784    0.7779       825
+weighted avg     0.7799    0.7794    0.7796       825
+
+Results write sucessfully to ../../../Data/aditucci/Output_percentage_data/small/fidelity/N_4/

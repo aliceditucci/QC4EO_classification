@@ -29,6 +29,8 @@ def main():
     parser.add_argument("--compute_entropy", help="1 for compute entanglement entropy", required=False, type=int, default=0)
     parser.add_argument("--mps_sim", help="1 for mps simulation", required=False, type=int, default=0)
     parser.add_argument("--compress_method", help="Type compression: 'small', 'sscnet' or 'unet' ", required=False, type=str, default='small')
+    parser.add_argument("--percentage_train", help="Percentage of training data", required=False, type=float, default=1.0)
+
 
     np.random.seed(1359)
     args = parser.parse_args()
@@ -46,7 +48,8 @@ def main():
     compress_method = args.compress_method
 
     #Set dataset handler
-    dataset_root = '../../../Data/aditucci/Latent/{}_q{}_b3'.format(compress_method, N_FEATURES)
+    # dataset_root = '../../../Data/aditucci/Latent/{}_q{}_b3'.format(compress_method, N_FEATURES)
+    dataset_root = '../../../Data/aditucci/Latent_old/{}_q{}_b3'.format(compress_method, N_FEATURES)
     handler = Handler_quantum(dataset_root)
 
     num_classes = args.numclasses   #NON SERVE PER ORA
@@ -79,6 +82,8 @@ def main():
         method='statevector'
         device='GPU' 
 
+    percentage_train = args.percentage_train
+     
     print("\n\n#############################################################################")
 
     print("\nn_qubits and features: ", N_FEATURES)
@@ -90,14 +95,16 @@ def main():
     print('compute entropy:', compute_entropy)
     print('mps simulation: ', mps_sim)
     print('compress_method: ', compress_method)
+    print('percentage_train', percentage_train)
     #endregion
 
-
     #Load data path
-    percentage_images = 1.0
+    percentage_images = 1.0 
+
     
     train_root = dataset_root + '/train'
-    x_train, train_labels = handler.load_paths_labels(train_root, classes=classes, percentage_images=percentage_images)
+    #NB percentage_train #####################
+    x_train, train_labels = handler.load_paths_labels(train_root, classes=classes, percentage_images=percentage_train)
 
     val_root = dataset_root + '/val'
     x_val, val_labels = handler.load_paths_labels(val_root, classes=classes, percentage_images=percentage_images)
@@ -110,7 +117,7 @@ def main():
     val_features = scaler.transform(x_val)
 
     #make data dir
-    dir = '../../../Data/aditucci/Output_data/{}/{}/N_{}/'.format(compress_method, kernel_type,N_FEATURES)
+    dir = '../../../Data/aditucci/Output_data_old/{}/{}/N_{}/'.format(compress_method, kernel_type,N_FEATURES)
     os.makedirs(dir, exist_ok=True)
 
     print('train: ', train_features.shape)
@@ -120,7 +127,9 @@ def main():
     entanglement_entropy = 0 
 
     if kernel_type == 'fidelity':
-        independent_entries, score, confusion = fidelity_kernels_simulator(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, method, device)
+        #independent_entries, score, confusion = fidelity_kernels_simulator(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, method, device)
+        #independent_entries, score, confusion = fidelity_kernels_parallel(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, method, device)
+        independent_entries, gram_matrix_test, score, score_train, confusion = fidelity_kernels_batch(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, method, device)
 
     elif kernel_type == 'projected':
         independent_entries, score, confusion = projected_kernels(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, method, device)
@@ -128,13 +137,15 @@ def main():
 
     save_data = {
             'kernel_entries': independent_entries,
+            'gram_matrix_test': gram_matrix_test,
             'N_FEATURES': N_FEATURES,
             'scores': score,
+            'score_train': score_train,
             'confusion': confusion,
             'entanglement_entropy': entanglement_entropy
                 }
 
-    results_file_path = dir + 'kernel_results_{}_{}_{}_{}.pkl'.format(ent_type, ZZ_reps,compute_entropy, mps_sim)
+    results_file_path = dir + 'kernel_results_{}_{}_{}_{}_{}.pkl'.format(ent_type, ZZ_reps,compute_entropy, mps_sim, percentage_train)
 
     with open(results_file_path, 'wb') as f:
         pickle.dump(save_data, f)

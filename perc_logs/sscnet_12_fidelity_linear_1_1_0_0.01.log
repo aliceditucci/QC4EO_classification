@@ -1,0 +1,33 @@
+
+
+#############################################################################
+
+n_qubits and features:  12
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  sscnet
+percentage_train 0.01
+train:  (44, 12)
+validation:  (825, 12)
+matrix_product_state CPU
+2.3338475227355957 sec to evaluate kernels
+tot time:  19.47485589981079 sec 
+
+Precomputed kernel classification test score: 0.7624242424242424
+
+Accuracy per class: [0.90133333 0.64666667] Mean Accuracy: 0.774
+              precision    recall  f1-score   support
+
+           0     0.6801    0.9013    0.7752       375
+           1     0.8872    0.6467    0.7481       450
+
+    accuracy                         0.7624       825
+   macro avg     0.7836    0.7740    0.7617       825
+weighted avg     0.7931    0.7624    0.7604       825
+
+Results write sucessfully to ../../../Data/aditucci/Output_percentage_data/sscnet/fidelity/N_12/

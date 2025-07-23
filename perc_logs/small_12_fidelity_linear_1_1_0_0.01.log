@@ -1,0 +1,99 @@
+
+
+#############################################################################
+
+n_qubits and features:  12
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+percentage_train 0.01
+train:  (44, 12)
+validation:  (825, 12)
+matrix_product_state CPU
+2.364651918411255 sec to evaluate kernels
+tot time:  19.576311349868774 sec 
+
+Precomputed kernel classification test score: 0.7648484848484849
+
+Accuracy per class: [0.83733333 0.70444444] Mean Accuracy: 0.770888888888889
+              precision    recall  f1-score   support
+
+           0     0.7025    0.8373    0.7640       375
+           1     0.8386    0.7044    0.7657       450
+
+    accuracy                         0.7648       825
+   macro avg     0.7705    0.7709    0.7648       825
+weighted avg     0.7767    0.7648    0.7649       825
+
+Results write sucessfully to ../../../Data/aditucci/Output_data_old/small/fidelity/N_12/
+
+
+#############################################################################
+
+n_qubits and features:  12
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+percentage_train 0.01
+train:  (44, 12)
+validation:  (825, 12)
+matrix_product_state CPU
+2.329519510269165 sec to evaluate kernels
+tot time:  20.13861894607544 sec 
+
+Precomputed kernel classification test score: 0.7648484848484849
+
+Accuracy per class: [0.83733333 0.70444444] Mean Accuracy: 0.770888888888889
+              precision    recall  f1-score   support
+
+           0     0.7025    0.8373    0.7640       375
+           1     0.8386    0.7044    0.7657       450
+
+    accuracy                         0.7648       825
+   macro avg     0.7705    0.7709    0.7648       825
+weighted avg     0.7767    0.7648    0.7649       825
+
+Results write sucessfully to ../../../Data/aditucci/Output_percentage_data/small/fidelity/N_12/
+
+
+#############################################################################
+
+n_qubits and features:  12
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+percentage_train 0.01
+train:  (44, 12)
+validation:  (825, 12)
+matrix_product_state CPU
+2.325244665145874 sec to evaluate kernels
+tot time:  19.398699283599854 sec 
+
+Precomputed kernel classification test score: 0.7648484848484849
+
+Accuracy per class: [0.83733333 0.70444444] Mean Accuracy: 0.770888888888889
+              precision    recall  f1-score   support
+
+           0     0.7025    0.8373    0.7640       375
+           1     0.8386    0.7044    0.7657       450
+
+    accuracy                         0.7648       825
+   macro avg     0.7705    0.7709    0.7648       825
+weighted avg     0.7767    0.7648    0.7649       825
+
+Results write sucessfully to ../../../Data/aditucci/Output_percentage_data/small/fidelity/N_12/

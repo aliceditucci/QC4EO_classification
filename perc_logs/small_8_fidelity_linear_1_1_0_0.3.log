@@ -1,0 +1,66 @@
+
+
+#############################################################################
+
+n_qubits and features:  8
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+percentage_train 0.3
+train:  (1320, 8)
+validation:  (825, 8)
+matrix_product_state CPU
+25.000672340393066 sec to evaluate kernels
+tot time:  63.64967131614685 sec 
+
+Precomputed kernel classification test score: 0.8218181818181818
+
+Accuracy per class: [0.79733333 0.84222222] Mean Accuracy: 0.8197777777777777
+              precision    recall  f1-score   support
+
+           0     0.8081    0.7973    0.8027       375
+           1     0.8330    0.8422    0.8376       450
+
+    accuracy                         0.8218       825
+   macro avg     0.8205    0.8198    0.8201       825
+weighted avg     0.8217    0.8218    0.8217       825
+
+Results write sucessfully to ../../../Data/aditucci/Output_percentage_data/small/fidelity/N_8/
+
+
+#############################################################################
+
+n_qubits and features:  8
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+percentage_train 0.3
+train:  (1320, 8)
+validation:  (825, 8)
+matrix_product_state CPU
+25.15012550354004 sec to evaluate kernels
+tot time:  64.24082636833191 sec 
+
+Precomputed kernel classification test score: 0.8218181818181818
+
+Accuracy per class: [0.79733333 0.84222222] Mean Accuracy: 0.8197777777777777
+              precision    recall  f1-score   support
+
+           0     0.8081    0.7973    0.8027       375
+           1     0.8330    0.8422    0.8376       450
+
+    accuracy                         0.8218       825
+   macro avg     0.8205    0.8198    0.8201       825
+weighted avg     0.8217    0.8218    0.8217       825
+
+Results write sucessfully to ../../../Data/aditucci/Output_percentage_data/small/fidelity/N_8/

@@ -1,0 +1,286 @@
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+train:  (44, 4)
+validation:  (7, 4)
+matrix_product_state CPU
+2.1597821712493896 sec to evaluate kernels
+tot time:  2.9880802631378174 sec 
+
+Precomputed kernel classification test score: 0.8571428571428571
+
+Accuracy per class: [0.66666667 1.        ] Mean Accuracy: 0.8333333333333333
+              precision    recall  f1-score   support
+
+           0     1.0000    0.6667    0.8000         3
+           1     0.8000    1.0000    0.8889         4
+
+    accuracy                         0.8571         7
+   macro avg     0.9000    0.8333    0.8444         7
+weighted avg     0.8857    0.8571    0.8508         7
+
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+train:  (440, 4)
+validation:  (82, 4)
+matrix_product_state CPU
+8.511606693267822 sec to evaluate kernels
+tot time:  17.124898672103882 sec 
+
+Precomputed kernel classification test score: 0.7804878048780488
+
+Accuracy per class: [0.78378378 0.77777778] Mean Accuracy: 0.7807807807807807
+              precision    recall  f1-score   support
+
+           0     0.7436    0.7838    0.7632        37
+           1     0.8140    0.7778    0.7955        45
+
+    accuracy                         0.7805        82
+   macro avg     0.7788    0.7808    0.7793        82
+weighted avg     0.7822    0.7805    0.7809        82
+
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+train:  (2200, 4)
+validation:  (412, 4)
+matrix_product_state CPU
+37.64737582206726 sec to evaluate kernels
+tot time:  81.24809002876282 sec 
+
+Precomputed kernel classification test score: 0.7839805825242718
+
+Accuracy per class: [0.77005348 0.79555556] Mean Accuracy: 0.7828045157456922
+              precision    recall  f1-score   support
+
+           0     0.7579    0.7701    0.7639       187
+           1     0.8063    0.7956    0.8009       225
+
+    accuracy                         0.7840       412
+   macro avg     0.7821    0.7828    0.7824       412
+weighted avg     0.7843    0.7840    0.7841       412
+
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  False
+compress_method:  small
+train:  (44, 4)
+validation:  (7, 4)
+statevector GPU
+3.996615171432495 sec to evaluate kernels
+Traceback (most recent call last):
+  File "/home/aditucci/QC4EO_classification/run_qkernels_parallel.py", line 148, in <module>
+    main()
+  File "/home/aditucci/QC4EO_classification/run_qkernels_parallel.py", line 125, in main
+    independent_entries, score, confusion = fidelity_kernels_batch(train_features, train_labels, val_features, val_labels, ZZ_reps, ent_type, method, device)
+  File "/home/aditucci/QC4EO_classification/kernel_functions.py", line 756, in fidelity_kernels_batch
+    svc.fit(gram_matrix_train, train_labels)
+  File "/home/aditucci/anaconda3/envs/env/lib/python3.10/site-packages/sklearn/base.py", line 1389, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "/home/aditucci/anaconda3/envs/env/lib/python3.10/site-packages/sklearn/svm/_base.py", line 197, in fit
+    X, y = validate_data(
+  File "/home/aditucci/anaconda3/envs/env/lib/python3.10/site-packages/sklearn/utils/validation.py", line 2961, in validate_data
+    X, y = check_X_y(X, y, **check_params)
+  File "/home/aditucci/anaconda3/envs/env/lib/python3.10/site-packages/sklearn/utils/validation.py", line 1370, in check_X_y
+    X = check_array(
+  File "/home/aditucci/anaconda3/envs/env/lib/python3.10/site-packages/sklearn/utils/validation.py", line 1055, in check_array
+    array = _asarray_with_order(array, order=order, dtype=dtype, xp=xp)
+  File "/home/aditucci/anaconda3/envs/env/lib/python3.10/site-packages/sklearn/utils/_array_api.py", line 839, in _asarray_with_order
+    array = numpy.asarray(array, order=order, dtype=dtype)
+  File "cupy/_core/core.pyx", line 1528, in cupy._core.core._ndarray_base.__array__
+TypeError: Implicit conversion to a NumPy array is not allowed. Please use `.get()` to construct a NumPy array explicitly.
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  False
+compress_method:  small
+train:  (44, 4)
+validation:  (7, 4)
+statevector GPU
+3.093766927719116 sec to evaluate kernels
+tot time:  4.240190505981445 sec 
+
+Precomputed kernel classification test score: 0.8571428571428571
+
+Accuracy per class: [0.66666667 1.        ] Mean Accuracy: 0.8333333333333333
+              precision    recall  f1-score   support
+
+           0     1.0000    0.6667    0.8000         3
+           1     0.8000    1.0000    0.8889         4
+
+    accuracy                         0.8571         7
+   macro avg     0.9000    0.8333    0.8444         7
+weighted avg     0.8857    0.8571    0.8508         7
+
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  False
+compress_method:  small
+train:  (440, 4)
+validation:  (82, 4)
+statevector GPU
+11.89095425605774 sec to evaluate kernels
+tot time:  23.946656227111816 sec 
+
+Precomputed kernel classification test score: 0.7804878048780488
+
+Accuracy per class: [0.78378378 0.77777778] Mean Accuracy: 0.7807807807807807
+              precision    recall  f1-score   support
+
+           0     0.7436    0.7838    0.7632        37
+           1     0.8140    0.7778    0.7955        45
+
+    accuracy                         0.7805        82
+   macro avg     0.7788    0.7808    0.7793        82
+weighted avg     0.7822    0.7805    0.7809        82
+
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  full
+compute entropy: False
+mps simulation:  False
+compress_method:  small
+train:  (44, 4)
+validation:  (7, 4)
+statevector GPU
+3.1068508625030518 sec to evaluate kernels
+tot time:  4.265385866165161 sec 
+
+Precomputed kernel classification test score: 0.7142857142857143
+
+Accuracy per class: [0.66666667 0.75      ] Mean Accuracy: 0.7083333333333333
+              precision    recall  f1-score   support
+
+           0     0.6667    0.6667    0.6667         3
+           1     0.7500    0.7500    0.7500         4
+
+    accuracy                         0.7143         7
+   macro avg     0.7083    0.7083    0.7083         7
+weighted avg     0.7143    0.7143    0.7143         7
+
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  full
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+train:  (44, 4)
+validation:  (7, 4)
+matrix_product_state CPU
+2.152189016342163 sec to evaluate kernels
+tot time:  3.001612663269043 sec 
+
+Precomputed kernel classification test score: 0.7142857142857143
+
+Accuracy per class: [0.66666667 0.75      ] Mean Accuracy: 0.7083333333333333
+              precision    recall  f1-score   support
+
+           0     0.6667    0.6667    0.6667         3
+           1     0.7500    0.7500    0.7500         4
+
+    accuracy                         0.7143         7
+   macro avg     0.7083    0.7083    0.7083         7
+weighted avg     0.7143    0.7143    0.7143         7
+
+
+
+#############################################################################
+
+n_qubits and features:  4
+num bands:  3 bands:  [3, 2, 1]
+classes:  ['River', 'SeaLake']
+kernel type:  fidelity
+ZZ repetitions:  1
+ent_type:  linear
+compute entropy: False
+mps simulation:  True
+compress_method:  small
+train:  (4400, 4)
+validation:  (825, 4)
+matrix_product_state CPU
+74.08764696121216 sec to evaluate kernels
+tot time:  160.9133279323578 sec 
+
+Precomputed kernel classification test score: 0.7793939393939394
+
+Accuracy per class: [0.77866667 0.78      ] Mean Accuracy: 0.7793333333333333
+              precision    recall  f1-score   support
+
+           0     0.7468    0.7787    0.7624       375
+           1     0.8088    0.7800    0.7941       450
+
+    accuracy                         0.7794       825
+   macro avg     0.7778    0.7793    0.7783       825
+weighted avg     0.7806    0.7794    0.7797       825
+

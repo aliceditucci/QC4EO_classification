@@ -23,7 +23,7 @@ def main():
     parser.add_argument("--N", help="Number of qubits", required=False, type=int, default=4)
     parser.add_argument("--numbands", help="Number of bands", required=False, type=int, default=3)
     parser.add_argument("--numclasses", help="Num of classes: 2 or all", required=False, type=int, default=2)
-    parser.add_argument("--kernel_type", help="Type of kernel: 'fidelity', 'projected' ", required=False, type=str, default='projected')
+    parser.add_argument("--kernel_type", help="Type of kernel: 'fidelity', 'projected' ", required=False, type=str, default='fidelity')
     parser.add_argument("--ZZ_reps", help="ZZ map repetitions", required=False, type=int, default=1)
     parser.add_argument("--ent_type", help="Type of entanglement: 'linear', 'full' ", required=False, type=str, default='linear')
     parser.add_argument("--compute_entropy", help="1 for compute entanglement entropy", required=False, type=int, default=0)
@@ -111,10 +111,11 @@ def main():
     print('train: ', train_features.shape)
 
     #Compute kernels and train SVC  
-    if kernel_type != 'projected':
-        raise ValueError('Kernel should be projected')
+    if kernel_type == 'projected':
+        entanglement_entropy, entropies = compute_entanglement_entropy(train_features, ZZ_reps, ent_type)
 
-    entanglement_entropy, entropies = compute_entanglement_entropy(train_features, ZZ_reps, ent_type)
+    if kernel_type == 'fidelity':
+        entanglement_entropy, entropies = fk_compute_entanglement_entropy(train_features, ZZ_reps, ent_type)
 
     print("Entanglement entropy: ", entanglement_entropy, len(entropies))
 

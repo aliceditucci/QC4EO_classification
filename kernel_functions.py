@@ -1,4 +1,5 @@
 import numpy as np
+# import cupy as np
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 
@@ -6,7 +7,7 @@ import time
 
 from qiskit_machine_learning.kernels import FidelityQuantumKernel
 from qiskit.primitives import StatevectorSampler as Sampler
-from qiskit.circuit.library import ZZFeatureMap
+from qiskit.circuit.library import ZZFeatureMap, ZFeatureMap
 from qiskit_machine_learning.state_fidelities import ComputeUncompute
 
 from qiskit.quantum_info import DensityMatrix,partial_trace, entropy
@@ -271,7 +272,14 @@ def projected_kernel_simulator(X, ZZ_reps=1, ent_type='linear', method = 'matrix
 
     for data_point in range(X.shape[0]):
         qc = QuantumCircuit(N_FEATURES)
-        fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+
+        if ent_type is None:
+            fm = ZFeatureMap(feature_dimension=N_FEATURES, reps=1)
+
+        else:
+            fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+
+        # fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
         # fm_bound = fm.bind_parameters(X[data_point])
         fm_bound = fm.assign_parameters(X[data_point])
         qc.append(fm_bound, range(N_FEATURES))
@@ -321,7 +329,13 @@ def projected_kernel_test_simulator(X, Y, x_partial_traces, ZZ_reps=1, ent_type=
 
     for data_point in range(Y.shape[0]):
         qc = QuantumCircuit(N_FEATURES)
-        fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+
+        if ent_type == 'none':
+            fm = ZFeatureMap(feature_dimension=N_FEATURES, reps=1)
+        else:
+            fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+        
+        # fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
         # fm_bound = fm.bind_parameters(X[data_point])
         fm_bound = fm.assign_parameters(Y[data_point])
         qc.append(fm_bound, range(N_FEATURES))
@@ -369,7 +383,7 @@ def compute_entanglement_entropy(X, ZZ_reps=1, ent_type='linear'):
 
     print('sim', sim)
     N_FEATURES = X.shape[1]
-    all_entropies = np.empty((X.shape[0]))
+    all_entropies = np.zeros((X.shape[0]))
 
     for data_point in range(X.shape[0]):
         qc = QuantumCircuit(N_FEATURES)
@@ -549,3 +563,308 @@ def get_fidelity_kernel_entries_test(X, Y, ZZ_reps, ent_type, method = 'statevec
             kernel_matrix[row, column] = fidelity
 
     return kernel_matrix
+
+
+def fk_compute_entanglement_entropy(X, ZZ_reps=1, ent_type='linear'):
+
+    #NEED TO ADD THE SAME FOR TEST FUNCTION!!!!!!!!!!!!!
+
+    method = 'statevector' #'matrix_product_state' or 'statevector'
+    # device = 'GPU' #'CPU' or 'GPU'
+    device = 'GPU'
+    print(method, device)
+    # sim = AerSimulator(method='matrix_product_state') #'matrix_product_state' or 'statevector'
+    sim = AerSimulator(method=method, device=device) #'matrix_product_state' or 'statevector'
+    print("Used backend", sim.configuration().to_dict()['backend_name'])
+
+    N_FEATURES = X.shape[1]
+    m = X.shape[0]
+    points = int(m*(m-1)/2)
+    all_entropies = np.zeros((points))
+    # all_entropies = np.zeros((m-1))
+
+    # for data_point in range(1):
+ 
+    for data_point in range(m):
+
+        for data_point2 in range(data_point+1, m):
+            qc1 = QuantumCircuit(N_FEATURES)
+            fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+            # fm_bound = fm.bind_parameters(X[data_oint])
+            fm_bound = fm.assign_parameters(X[data_point])
+            qc1.append(fm_bound, range(N_FEATURES))
+
+            qc2 = QuantumCircuit(N_FEATURES)
+            fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+            # fm_bound = fm.bind_parameters(X[data_point])
+            fm_bound = fm.assign_parameters(X[data_point2])
+            qc2.append(fm_bound, range(N_FEATURES))
+
+            qc = qc1.compose(qc2.inverse())
+
+            # Save subsystem A (first half) density matrix
+            half = N_FEATURES // 2
+            qc.save_density_matrix(list(range(half)), label='subsystem_half')
+
+            qc = transpile(qc, sim, optimization_level=3)
+            result = sim.run(qc).result()
+            data = result.data(0)
+
+            reduced_rho = data['subsystem_half']
+
+            all_entropies[data_point] = entropy(reduced_rho, base=2)
+            
+    entanglement_entropy = np.mean(all_entropies)
+    return entanglement_entropy, all_entropies
+
+
+
+
+##########################################################
+from itertools import product
+from joblib import Parallel, delayed
+from itertools import combinations
+from tqdm import tqdm
+
+def fidelity_kernels_parallel(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type , method = 'matrix_product_state', device = 'CPU'):
+
+    print(method, device)
+    # num_features = train_features.shape[1] #num qubits
+    m = train_features.shape[0]  #num data points
+
+    t0 = time.time()
+    
+    gram_matrix_train = get_entries(train_features, ZZ_reps=ZZ_reps, ent_type=ent_type, method=method, device=device)
+
+    t1 = time.time()
+    print(t1-t0, 'sec to evaluate kernels')
+    mask = np.triu_indices(m,k=1) #returns the indices of the upper-triangular part of an (m x m) square matrix.
+    independent_entries = gram_matrix_train[mask]
+
+    #SVC train and test
+    svc = SVC(kernel="precomputed", random_state=42) #Remove , random_state=42 for not deterministic
+
+    svc.fit(gram_matrix_train, train_labels)
+
+    gram_matrix_test =  get_entries_test(train_features, test_features, ZZ_reps=ZZ_reps, ent_type=ent_type, method=method, device=device) 
+
+    score_kernel = svc.score(gram_matrix_test, test_labels)
+    t2 = time.time()
+    print('tot time: ', t2-t0, 'sec \n')
+    print(f"Precomputed kernel classification test score: {score_kernel}\n")
+
+    # Get predicted probabilities
+    y_pred_probs = svc.predict(gram_matrix_test)
+
+    # Convert probabilities to class labels (assuming binary classification with threshold 0.5)
+    y_pred = (y_pred_probs > 0.5).astype(int).flatten()
+
+    # Compute confusion matrix (normalized)
+    labels = np.unique(test_labels)  # Dynamically determine class labels
+    confusion = confusion_matrix(test_labels, y_pred, labels=labels, normalize='true')
+
+    # Print Accuracy Per Class and Report
+    print('Accuracy per class:', confusion.diagonal(), 'Mean Accuracy:', confusion.diagonal().mean())
+    print(classification_report(test_labels, y_pred, labels=labels, target_names=[str(label) for label in labels], digits=4))
+
+    return independent_entries, score_kernel, confusion
+
+
+def compute_entry(i, j, x, y, N_FEATURES, ZZ_reps, ent_type, method, device):
+    sim = AerSimulator(method=method, device=device)
+
+    fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+
+    qc1 = QuantumCircuit(N_FEATURES)
+    qc1.append(fm.assign_parameters(x), range(N_FEATURES))
+
+    qc2 = QuantumCircuit(N_FEATURES)
+    qc2.append(fm.assign_parameters(y), range(N_FEATURES))
+
+    qc = qc1.compose(qc2.inverse())
+    qc.save_statevector()
+    # qc = transpile(qc, sim, optimization_level=3)
+    qc = transpile(qc, sim)
+
+    result = sim.run(qc).result()
+    state = result.data(0)['statevector']
+    fidelity = state.probabilities()[0]
+
+    return i, j, fidelity
+
+
+def get_entries(X, ZZ_reps, ent_type, method = 'statevector', device='CPU'):
+
+    sim = AerSimulator(method=method, device=device) #'matrix_product_state' or 'statevector'
+    print("Used backend", sim.configuration().to_dict()['backend_name'])
+
+    N_FEATURES = X.shape[1]
+    m = X.shape[0]  #num data points
+    
+    kernel_matrix = np.ones((m,m)) 
+
+    indices = list(combinations(range(m), 2))
+
+    entries = Parallel(n_jobs=-1)(
+        delayed(compute_entry)(i, j , X[i], X[j], N_FEATURES, ZZ_reps, ent_type, method, device)
+        for i, j in indices
+        # for i, j in tqdm(indices, desc="Computing kernel entries")
+    )
+
+    for i, j, val in entries:
+        kernel_matrix[i, j] = val
+        if i != j:
+            kernel_matrix[j, i] = val
+
+    return kernel_matrix
+
+
+def get_entries_test(X, Y, ZZ_reps, ent_type, method = 'statevector', device='CPU'):
+
+    sim = AerSimulator(method=method, device=device) #'matrix_product_state' or 'statevector'
+    print("Used backend", sim.configuration().to_dict()['backend_name'])
+
+    N_FEATURES = X.shape[1]
+    m = X.shape[0]  #num data points
+    n = Y.shape[0]
+    
+    kernel_matrix = np.ones((n,m)) 
+
+    indices = list(product(range(n), range(m)))
+
+    entries = Parallel(n_jobs=-1)(
+        delayed(compute_entry)(i, j, Y[i], X[j], N_FEATURES, ZZ_reps, ent_type, method, device)
+        for i, j in indices
+        # for i, j in tqdm(indices, desc="Computing kernel entries")
+    )
+
+    for i, j, val in entries:
+        kernel_matrix[i, j] = val
+
+    return kernel_matrix
+
+
+
+##########################################
+#BATCH STATE VECTOR
+
+def fidelity_kernels_batch(train_features, train_labels, test_features, test_labels, ZZ_reps, ent_type , method = 'matrix_product_state', device = 'CPU'):
+
+    print(method, device)
+    # num_features = train_features.shape[1] #num qubits
+    m = train_features.shape[0]  #num data points
+
+    t0 = time.time()
+    
+    gram_matrix_train = get_kernel_entries_frombatch(train_features, ZZ_reps, ent_type, method, device)
+
+    t1 = time.time()
+    print(t1-t0, 'sec to evaluate kernels')
+    mask = np.triu_indices(m,k=1) #returns the indices of the upper-triangular part of an (m x m) square matrix.
+    independent_entries = gram_matrix_train[mask]
+
+    #SVC train and test
+    svc = SVC(kernel="precomputed", random_state=42) #Remove , random_state=42 for not deterministic
+
+    svc.fit(gram_matrix_train, train_labels)
+
+    gram_matrix_test =  get_kernel_entries_frombatch_test(train_features, test_features, ZZ_reps, ent_type, method, device)
+
+    score_kernel_train = svc.score(gram_matrix_train, train_labels) #train accuracy
+    score_kernel = svc.score(gram_matrix_test, test_labels) #validation accuracy
+
+    t2 = time.time()
+    print('tot time: ', t2-t0, 'sec \n')
+    print(f"Precomputed kernel classification test score: {score_kernel}\n")
+
+    # Get predicted probabilities
+    y_pred_probs = svc.predict(gram_matrix_test)
+
+    # Convert probabilities to class labels (assuming binary classification with threshold 0.5)
+    y_pred = (y_pred_probs > 0.5).astype(int).flatten()
+
+    # Compute confusion matrix (normalized)
+    labels = np.unique(test_labels)  # Dynamically determine class labels
+    confusion = confusion_matrix(test_labels, y_pred, labels=labels, normalize='true')
+
+    # Print Accuracy Per Class and Report
+    print('Accuracy per class:', confusion.diagonal(), 'Mean Accuracy:', confusion.diagonal().mean())
+    print(classification_report(test_labels, y_pred, labels=labels, target_names=[str(label) for label in labels], digits=4))
+
+    return independent_entries, gram_matrix_test, score_kernel, score_kernel_train, confusion
+
+def batch_generator(data, batch_size):
+    """Yield batches of data."""
+    for i in range(0, len(data), batch_size):
+        yield data[i:i+batch_size]
+
+
+def get_state(x, N_FEATURES, ZZ_reps, ent_type, method, device):
+    sim = AerSimulator(method=method, device=device)
+
+    if ent_type == 'none':
+        fm = ZFeatureMap(feature_dimension=N_FEATURES, reps=1)
+
+    else:
+        fm = ZZFeatureMap(feature_dimension=N_FEATURES, reps=ZZ_reps, entanglement=ent_type)
+
+
+    qc1 = QuantumCircuit(N_FEATURES)
+    qc1.append(fm.assign_parameters(x), range(N_FEATURES))
+    qc1.save_statevector()
+
+    qc1 = transpile(qc1, sim, optimization_level=3)
+
+    result = sim.run(qc1).result()
+    state = result.data(0)['statevector']
+
+    return state 
+
+
+def compute_all_states_batched(X, ZZ_reps, ent_type, method='statevector', device='CPU', n_jobs=4, batch_size=100):
+
+    N_FEATURES = X.shape[1]
+    all_states = []
+
+    for batch in batch_generator(X, batch_size):
+        # Compute states for this batch in parallel
+        batch_states = Parallel(n_jobs=n_jobs)(
+            delayed(get_state)(x, N_FEATURES, ZZ_reps, ent_type, method, device) for x in batch
+        )
+        all_states.extend(batch_states)
+
+    return np.array(all_states)
+
+def get_kernel_entries_frombatch(X, ZZ_reps, ent_type, method='statevector', device='CPU', n_jobs=4, batch_size=100):
+
+    X_states = compute_all_states_batched(X, ZZ_reps, ent_type, method, device, n_jobs, batch_size)
+    kernel_matrix = np.abs(X_states @ X_states.conj().T) ** 2
+
+    return kernel_matrix
+
+def get_kernel_entries_frombatch_test(X, Y, ZZ_reps, ent_type, method='statevector', device='CPU', n_jobs=4, batch_size=100):
+
+    X_states = compute_all_states_batched(X, ZZ_reps, ent_type, method, device, n_jobs, batch_size)
+    Y_states = compute_all_states_batched(Y, ZZ_reps, ent_type, method, device, n_jobs, batch_size)
+    kernel_matrix = np.abs(Y_states @ X_states.conj().T) ** 2
+
+    return kernel_matrix
+
+#####################################
+#Downscale dataset
+
+def reconstruct_gram_matrix(independent_entries):
+    
+    m = independent_entries.shape[0]
+    print('num points', m)
+    gram_matrix = np.zeros((m, m))
+    
+    # Fill upper triangle (excluding diagonal)
+    mask = np.triu_indices(m, k=1)
+    gram_matrix[mask] = independent_entries
+    
+    # Reflect upper triangle to lower triangle (symmetry)
+    gram_matrix += gram_matrix.T
+    np.fill_diagonal(gram_matrix, 1.0) 
+
+    return gram_matrix
