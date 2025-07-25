@@ -32,7 +32,8 @@ class Autoencoder_small(pl.LightningModule):
             nn.MaxPool2d(2, 2), #  [B, 32, 16, 16] -> [B, 32, 8, 8]
         
             nn.Flatten(), #  [B, 2048] invece di [B, 2304]
-            nn.Linear(2048, num_qubits)  # Bottleneck
+            nn.Linear(2048, num_qubits),  # Bottleneck
+            nn.Sigmoid()
         )
 
         self.decoder = nn.Sequential(
@@ -124,7 +125,7 @@ class Autoencoder_small(pl.LightningModule):
         self.log('valid_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
         self.log('valid_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
-        if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
+        if ((self.current_epoch)  % 5 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
 
         return loss
@@ -154,7 +155,7 @@ class Autoencoder_small(pl.LightningModule):
         self.log('test_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
         self.log('test_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
-        if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
+        if ((self.current_epoch)  % 5 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
 
         return loss
@@ -196,7 +197,8 @@ class Autoencoder_sscnet(pl.LightningModule):
             nn.MaxPool2d(2, 2), #[B, 256, 16, 16] -> [B, 256, 8, 8]
         
             nn.Flatten(), #  [B, 256*8*8] invece di [B, 2304]
-            nn.Linear(16384, num_qubits)  # Bottleneck
+            nn.Linear(16384, num_qubits),  # Bottleneck
+            nn.Sigmoid()
         )
 
         self.decoder = nn.Sequential(
@@ -290,7 +292,7 @@ class Autoencoder_sscnet(pl.LightningModule):
         self.log('valid_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
         self.log('valid_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
-        if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
+        if ((self.current_epoch)  % 5 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
 
         return loss
@@ -320,7 +322,7 @@ class Autoencoder_sscnet(pl.LightningModule):
         self.log('test_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
         self.log('test_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
-        if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
+        if ((self.current_epoch)  % 5 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
 
         return loss
@@ -372,7 +374,8 @@ class UNet(pl.LightningModule):
             nn.MaxPool2d(2),                # down4
             DoubleConv(512, 1024),          # bottleneck
             nn.Flatten(),
-            nn.Linear(4*4*1024,num_qubits)
+            nn.Linear(4*4*1024,num_qubits),
+            nn.Sigmoid()
         )
         
         self.post_quantum = nn.Sequential(
@@ -482,7 +485,7 @@ class UNet(pl.LightningModule):
         self.log('valid_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
         self.log('valid_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
-        if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
+        if ((self.current_epoch)  % 5 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
 
         return loss
@@ -512,7 +515,7 @@ class UNet(pl.LightningModule):
         self.log('test_ssim', ssim, on_epoch=True, prog_bar=True, metric_attribute='ssim_metric')
         self.log('test_psnr', psnr, on_epoch=True, prog_bar=True, metric_attribute='psrn_metric')
         
-        if ((self.current_epoch)  % 3 == 0) or self.current_epoch==0:
+        if ((self.current_epoch)  % 5 == 0) or self.current_epoch==0:
             log_visual_results(self.logger, self.current_epoch, batch, reconstructions, batch_idx)
 
         return loss
@@ -534,63 +537,68 @@ class UNet(pl.LightningModule):
 # TODO: to be moved to a utils .py file
 
 def log_visual_results(logger, current_epoch, batch:tuple, reconstructions:torch.tensor, batch_idx:int):
-    x, _, _ = batch # bs, c, w, h
-    x = x.cpu().detach().numpy()
-    yp = reconstructions
-    yp = yp.cpu().detach().numpy()
-
-    if x.shape[1] > 3: plot_bands = [3,2,1]
-    else: plot_bands = [0,1,2]
-
-    bsize = x.shape[0]//4
-
-    fig, axes = plt.subplots(nrows=bsize*2, ncols=2, figsize=(15, 5*bsize*2))
-
-    for i in range(bsize):
-        xi = np.moveaxis(x[i,plot_bands,...], 0, -1) # bs, c, w, h
-        yi = np.moveaxis(yp[i,plot_bands, ...], 0, -1)
     
-        #### MAPS
-        axes[2*i,0].imshow(xi)
-        axes[2*i,0].axis(False)
-        axes[2*i,0].set_title('Input')
+    if batch_idx < 3:
+        x, _, _ = batch # bs, c, w, h
+        x = x.cpu().detach().numpy()
+        yp = reconstructions
+        yp = yp.cpu().detach().numpy()
 
-        axes[2*i,1].imshow(yi)
-        axes[2*i,1].axis(False)
-        axes[2*i,1].set_title(f'Recontruction')
-        colors = [
-            "#1f77b4",  # blue
-            "#ff7f0e",  # orange
-            "#2ca02c",  # green
-            "#d62728",  # red
-            "#9467bd",  # purple
-            "#8c564b",  # brown
-            "#e377c2",  # pink
-            "#7f7f7f",  # gray
-            "#bcbd22",  # yellow-green
-            "#17becf",  # cyan
-            "#393b79",  # dark blue
-            "#637939",  # olive green
-            "#8c6d31",  # ochre
-            "#843c39",  # dark red
-            "#7b4173",  # violet
-            "#5254a3",  # steel blue
-            "#9c9ede",  # light purple
-            "#cedb9c",  # light green
-            "#e7ba52",  # mustard
-            "#bd9e39"   # golden brown
-        ]
-
-        #### HIST
-        for j in range(xi.shape[-1]):
-
-            color = colors[j]
-
-            axes[2*i+1,0].hist(xi[..., j].flatten(), density=True, bins=50, label=f"band_{j}", color=color)
-            axes[2*i+1,1].hist(yi[..., j].flatten(), density=True, bins=50, color=color)
-
-        axes[2*i+1,0].legend()
+        if x.shape[1] > 3: plot_bands = [3,2,1]
+        else: plot_bands = [0,1,2]
         
-    plt.tight_layout()
-    logger.experiment.add_figure(f'{batch_idx}', plt.gcf(), global_step=current_epoch)
-    plt.close()
+        # FIXME is set to 4 to make if faster
+                
+        if x.shape[0] >= 10: bsize = 10
+        else: bsize = 4 # x.shape[0]
+
+        fig, axes = plt.subplots(nrows=bsize*2, ncols=2, figsize=(15, 5*bsize*2))
+
+        for i in range(bsize):
+            xi = np.moveaxis(x[i,plot_bands,...], 0, -1) # bs, c, w, h
+            yi = np.moveaxis(yp[i,plot_bands, ...], 0, -1)
+    
+            #### MAPS
+            axes[2*i,0].imshow(xi)
+            axes[2*i,0].axis(False)
+            axes[2*i,0].set_title('Input')
+
+            axes[2*i,1].imshow(yi)
+            axes[2*i,1].axis(False)
+            axes[2*i,1].set_title(f'Recontruction')
+            colors = [
+                "#1f77b4",  # blue
+                "#ff7f0e",  # orange
+                "#2ca02c",  # green
+                "#d62728",  # red
+                "#9467bd",  # purple
+                "#8c564b",  # brown
+                "#e377c2",  # pink
+                "#7f7f7f",  # gray
+                "#bcbd22",  # yellow-green
+                "#17becf",  # cyan
+                "#393b79",  # dark blue
+                "#637939",  # olive green
+                "#8c6d31",  # ochre
+                "#843c39",  # dark red
+                "#7b4173",  # violet
+                "#5254a3",  # steel blue
+                "#9c9ede",  # light purple
+                "#cedb9c",  # light green
+                "#e7ba52",  # mustard
+                "#bd9e39"   # golden brown
+            ]
+
+            #### HIST
+            for j in range(xi.shape[-1]):
+
+                color = colors[j]
+
+                axes[2*i+1,0].hist(xi[..., j].flatten(), density=True, bins=50, label=f"band_{j}", color=color)
+                axes[2*i+1,1].hist(yi[..., j].flatten(), density=True, bins=50, color=color)
+
+            axes[2*i+1,0].legend()
+            
+        plt.tight_layout()
+        logger.experiment.add_figure(f'{batch_idx}', plt.gcf(), global_step=current_epoch)
+        plt.close()

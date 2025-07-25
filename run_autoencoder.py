@@ -108,7 +108,7 @@ def optuna_objective(trial: optuna.trial.Trial, parser) -> float:
         batch_size        = batch_size, 
         bands             = bands,
         mode              = 'aec',
-        num_workers       = 4,
+        num_workers       = 8,
     )
 
     log_name = f"{method}_q{num_qubits}_b{num_bands}_lr{initial_lr}_lw_{loss_weigths}_g{gamma}_lf{lr_scheduler_f}"
@@ -126,7 +126,7 @@ def optuna_objective(trial: optuna.trial.Trial, parser) -> float:
 
     early_stopping = EarlyStopping(
         monitor='valid_loss',
-        patience=int(num_epochs*0.15),
+        patience=int(num_epochs*0.05),
         verbose=True,
         mode='min'
     )
@@ -196,8 +196,8 @@ if __name__ == "__main__":
 
     if args.mode =='tune':
         # NOTE this shall be selected depending on your needs
-        n_trials = 100
-        timeout = 21600 # s -> 6 hours
+        n_trials = 20
+        timeout = 21600*4 # s -> 6 hours
 
     if args.mode =='train':
         n_trials = 1
