@@ -64,7 +64,8 @@ def main():
     print('percentage_train', percentage_train)
     #endregion
 
-    features_list = [4,8,12,16, 20, 24, 28]
+    # features_list = [4,8,12,16, 20, 24, 28]
+    features_list = [30]
 
     linear_results = []
     rbf_results = []
@@ -133,14 +134,14 @@ def main():
         'rbf_results': rbf_results
             }
 
-    dir = '../../../Data/aditucci/Output_data_classical/'
-    os.makedirs(dir, exist_ok=True)
-    results_file_path = dir + 'classic_kernel_results_{}_{}.pkl'.format(compress_method, percentage_train)
+    # dir = '../../../Data/aditucci/Output_data_classical/'
+    # os.makedirs(dir, exist_ok=True)
+    # results_file_path = dir + 'classic_kernel_results_{}_{}.pkl'.format(compress_method, percentage_train)
 
-    with open(results_file_path, 'wb') as f:
-        pickle.dump(save_data, f)
+    # with open(results_file_path, 'wb') as f:
+    #     pickle.dump(save_data, f)
 
-    print('Results write sucessfully to ' + dir)
+    # print('Results write sucessfully to ' + dir)
 
 if __name__ == "__main__":
     main()

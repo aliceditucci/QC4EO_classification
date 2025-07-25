@@ -88,25 +88,30 @@ def main():
     print('compress_method: ', compress_method)
     #endregion
 
-    #Set dataset handler
-    dataset_root = '../../../Data/aditucci/Latent/{}_q{}_b3'.format(compress_method, N_FEATURES)
-    # dataset_root = '../../../Data/aditucci/Latent_old/{}_q{}_b3'.format(compress_method, N_FEATURES)
-    handler = Handler_quantum(dataset_root)
+    if precomputed_kernel == XX:
+        print(precomputed_kernel)
 
-    #Load data path
-    percentage_images = 1.0
-    
-    train_root = dataset_root + '/train'
-    x_train, train_labels = handler.load_paths_labels(train_root, classes=classes, percentage_images=percentage_images)
+    elif precomputed_kernel == XX:
+        print(precomputed_kernel)
+        #Set dataset handler
+        dataset_root = '../../../Data/aditucci/Latent/{}_q{}_b3'.format(compress_method, N_FEATURES)
+        # dataset_root = '../../../Data/aditucci/Latent_old/{}_q{}_b3'.format(compress_method, N_FEATURES)
+        handler = Handler_quantum(dataset_root)
 
-    val_root = dataset_root + '/val'
-    x_val, val_labels = handler.load_paths_labels(val_root, classes=classes, percentage_images=percentage_images)
+        #Load data path
+        percentage_images = 1.0
+        
+        train_root = dataset_root + '/train'
+        x_train, train_labels = handler.load_paths_labels(train_root, classes=classes, percentage_images=percentage_images)
 
-    #Normalize data
-    scaler = MinMaxScaler(feature_range=(0, 2 * np.pi))  
-    scaler.fit(x_train)
-    train_features = scaler.transform(x_train)
-    val_features = scaler.transform(x_val)
+        val_root = dataset_root + '/val'
+        x_val, val_labels = handler.load_paths_labels(val_root, classes=classes, percentage_images=percentage_images)
+
+        #Normalize data
+        scaler = MinMaxScaler(feature_range=(0, 2 * np.pi))  
+        scaler.fit(x_train)
+        train_features = scaler.transform(x_train)
+        val_features = scaler.transform(x_val)
 
     #Load train kernels data
     datafile = '../../../Data/aditucci/Output_data_old/{}/{}/N_{}/kernel_results_{}_{}_False_{}'.format(compress_method, kernel_type, N_FEATURES, ent_type, ZZ_reps, mps_sim)
