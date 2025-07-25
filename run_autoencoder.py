@@ -128,7 +128,8 @@ def optuna_objective(trial: optuna.trial.Trial, parser) -> float:
         monitor='valid_loss',
         patience=int(num_epochs*0.05),
         verbose=True,
-        mode='min'
+        mode='min',
+        min_delta=1e-3
     )
 
     # Instantiate Trainer
@@ -180,7 +181,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--N",             help="Number of qubits", required=False, type=int, default=12)
     parser.add_argument("--numbands",      help="Number of bands", required=False, type=int, default=3)
-    parser.add_argument("--epochs",        help="Number of epochs", required=False, type=int, default=100)
+    parser.add_argument("--epochs",        help="Number of epochs", required=False, type=int, default=50)
     parser.add_argument("--perc",          help="Percentage of dataset", required=False, type=float, default=0.3)
     parser.add_argument("--method",        help="Type of autoencoder: 'small' or 'sscnet' ", required=False, type=str, default='small', choices=['small', 'sscnet', 'unet'])
     parser.add_argument("--numclasses",    help="Num of classes: 2 or all", required=False, type=int, default=2)
